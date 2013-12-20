@@ -194,7 +194,7 @@ define([
 
                 var direction = (k - 2 < 0) ? -1.0 : 1.0;
                 expandAndWidth[expandAndWidthIndex++] = 2 * (k % 2) - 1;       // expand direction
-                expandAndWidth[expandAndWidthIndex++] = direction * width;
+                expandAndWidth[expandAndWidthIndex++] = direction * width[j];
 
                 if (vertexFormat.st) {
                     st[stIndex++] = j / (positionsLength - 1);
