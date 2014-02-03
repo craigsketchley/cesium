@@ -6,8 +6,7 @@ define([
         '../Core/Plane',
         '../Core/defined',
         '../Core/DeveloperError',
-        '../Core/Ellipsoid',
-        './createTaskProcessorWorker'
+        '../Core/Ellipsoid'
     ], function(
         Cartesian3,
         Cartographic,
@@ -15,8 +14,7 @@ define([
         CesiumMath,
         defined,
         DeveloperError,
-        Ellipsoid,
-        createTaskProcessorWorker) {
+        Ellipsoid) {
     "use strict";
 
     var quantizedStride = 3;
@@ -52,7 +50,7 @@ define([
 
 
     // TODO: Need to change to account for vertices in the format (x, y, z, h, u, v).
-    function insertVerticesAtVerticalSlice(parameters, transferableObjects) {
+    var insertVerticesAtVerticalSlice = function insertVerticesAtVerticalSlice(parameters, transferableObjects) {
         var uBuffer = uScratch;
         uBuffer.length = 0;
 
@@ -518,11 +516,11 @@ define([
             }
         }
 
-        // I DON'T THINK IS EVER REACHED.
+        // TODO: I DON'T THINK IS EVER REACHED.
         // if numBehind is 3, the triangle is completely behind the plane;
         // otherwise, it is completely in front (numBehind is 0).
         return undefined;
     }
 
-    return createTaskProcessorWorker(insertVerticesAtVerticalSlice);
+    return insertVerticesAtVerticalSlice;
 });

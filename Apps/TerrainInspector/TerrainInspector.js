@@ -13,6 +13,65 @@ require([
     CheckBox) {
     "use strict";
 
+/*    var clone = function clone(func) {
+        return function(obj) {
+            func.prototype = obj;
+            return new func;
+        };
+    }(function(){});
+
+    function extend(A, B){
+        A.prototype = clone(B.prototype);
+        A.prototype.constructor = A;
+        return A;
+    };
+
+    function Person(first, last) {
+        this.firstName = first;
+        this.lastName = last;
+    };
+
+    Person.prototype.getFullName = function() {
+        return this.firstName + ' ' + this.lastName;
+    };
+
+    var p1 = new Person('FN_1', 'LN_1');
+
+    function onPersonCreate() {
+        alert('Person called '+ this.getFullName() +' created.');
+    }
+    Person = (function(Person) {
+        return extend(function() { Person.apply(this, arguments); onPersonCreate.call(this); }, Person);
+    }(Person));*/
+
+
+
+
+    var oldTerrainMesh = Cesium.TerrainMesh;
+    console.log(Cesium.TerrainMesh.prototype.constructor.toString());
+
+    Cesium.TerrainMesh.prototype.constructor = function TerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace) {
+        /**
+         * parameters.sliceValue
+         * parameters.vertices
+         * parameters.indices
+         * parameters.maximumHeight
+         * parameters.minimumHeight
+         * parameters.extent
+         * parameters.elipsoid
+         * parameters.relativeToCenter
+         */
+
+        // Modify the vertices coming in...
+//        Cesium.insertVerticesAtVerticalSlice();
+        console.log("I would insert my own terrainMesh function here!");
+
+        // Use the original terrain mesh constructor.
+        return oldTerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace);
+    };
+    console.log(Cesium.TerrainMesh.toString());
+
+
     var viewer = new Cesium.Viewer('cesiumContainer');
 
     var scene = viewer.scene;
@@ -20,8 +79,8 @@ require([
     centralBody.depthTestAgainstTerrain = true;
 
     centralBody.terrainProvider = new Cesium.CesiumTerrainProvider({
-        url : 'http://c1200562-00.stk.com/stk-terrain/tilesets/slightly-smaller/tiles'
-        //url : 'http://cesiumjs.org/smallterrain'
+//        url : 'http://cesiumjs.org/stk-terrain/tilesets/GTOPO30/tiles'
+        url : 'http://cesiumjs.org/smallterrain'
     });
 
     var tp = new TitlePane({
