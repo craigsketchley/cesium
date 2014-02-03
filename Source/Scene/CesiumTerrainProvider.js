@@ -6,7 +6,6 @@ define([
         '../Core/defined',
         '../Core/loadArrayBuffer',
         '../Core/loadJson',
-        '../Core/makeRelativeUrlAbsolute',
         '../Core/throttleRequestByServer',
         '../Core/DeveloperError',
         '../Core/Event',
@@ -16,6 +15,7 @@ define([
         './QuantizedMeshTerrainData',
         './TerrainProvider',
         './TileProviderError',
+        '../ThirdParty/Uri',
         '../ThirdParty/when'
     ], function(
         BoundingSphere,
@@ -24,7 +24,6 @@ define([
         defined,
         loadArrayBuffer,
         loadJson,
-        makeRelativeUrlAbsolute,
         throttleRequestByServer,
         DeveloperError,
         Event,
@@ -34,6 +33,7 @@ define([
         QuantizedMeshTerrainData,
         TerrainProvider,
         TileProviderError,
+        Uri,
         when) {
     "use strict";
 
@@ -97,10 +97,9 @@ define([
             var message;
 
             if (!data.format) {
-                data.format = 'quantized-mesh-1.0';
-//                message = 'The tile format is not specified in the layer.json file.';
-//                metadataError = TileProviderError.handleError(metadataError, that, that._errorEvent, message, undefined, undefined, undefined, requestMetadata);
-//                return;
+                message = 'The tile format is not specified in the layer.json file.';
+                metadataError = TileProviderError.handleError(metadataError, that, that._errorEvent, message, undefined, undefined, undefined, requestMetadata);
+                return;
             }
 
             if (data.format === 'heightmap-1.0') {
@@ -121,9 +120,11 @@ define([
                 return;
             }
 
+            var baseUri = new Uri(metadataUrl);
+
             that._tileUrlTemplates = data.tiles;
             for (var i = 0; i < that._tileUrlTemplates.length; ++i) {
-                that._tileUrlTemplates[i] = makeRelativeUrlAbsolute(metadataUrl, that._tileUrlTemplates[i]).replace('{version}', data.version);
+                that._tileUrlTemplates[i] = new Uri(that._tileUrlTemplates[i]).resolve(baseUri).toString().replace('{version}', data.version);
             }
 
             that._availableTiles = data.available;
@@ -287,7 +288,7 @@ define([
         var northIndices = new Uint16Array(buffer, pos, northVertexCount);
         pos += northVertexCount * uint16Length;
 
-        var skirtHeight = provider.getLevelMaximumGeometricError(level) * 2.0;
+        var skirtHeight = provider.getLevelMaximumGeometricError(level) * 5.0;
 
         return new QuantizedMeshTerrainData({
             center : center,
