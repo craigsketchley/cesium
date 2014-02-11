@@ -28,9 +28,6 @@ define([
     var uIndex = 4;
     var vIndex = 5;
 
-    var uScratch = [];
-    var vScratch = [];
-    var heightScratch = [];
     var indicesScratch = [];
 
     var cartesian3Scratch = new Cartesian3();
@@ -48,30 +45,29 @@ define([
      *
      */
 
-    // TODO: Need to change to account for vertices in the format (x, y, z, h, u, v).
-    var insertVerticesAtVerticalSlice = function insertVerticesAtVerticalSlice(parameters, transferableObjects) {
-        var uBuffer = uScratch;
-        uBuffer.length = 0;
-
-        var vBuffer = vScratch;
-        vBuffer.length = 0;
-
-        var heightBuffer = heightScratch;
-        heightBuffer.length = 0;
-
+    var insertVerticesAlongExtent = function insertVerticesAlongExtent(parameters, transferableObjects) {
         var indices = indicesScratch;
         indices.length = 0;
 
-        // TODO: Assuming a vertical slice to start with...
-        // TODO: Validate the sign of the plane distance value.
-        var slicePlaneNormal = new Cartesian3(1, 0, 0); // u unit vect. => vertical slice.
-
-        var slicePlane = new Plane(slicePlaneNormal, -parameters.sliceValue); // TODO: Assuming slice value is [0,1] for the tile.
-
         var newVerticesMap = {};
 
-        var originalVertices = new Float32Array(parameters.vertices); // TODO: May need to construct as Float32Array.
-        var originalIndices = new Uint16Array(parameters.indices); // TODO: Same as above, may need to change the format of the index buffer.
+        var westSliceValue = (parameters.sliceExtent.west - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
+        var eastSliceValue = (parameters.sliceExtent.east - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
+        var northSliceValue = (parameters.sliceExtent.north - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
+        var southSliceValue = (parameters.sliceExtent.south - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
+
+        var longSlicePlaneNormal = new Cartesian3(1, 0, 0); // u unit vect. => vertical slice.
+        var latSlicePlaneNormal = new Cartesian3(0, 1, 0); // v unit vect. => horizontal slice.
+
+        var westSlicePlane = new Plane(longSlicePlaneNormal, -westSliceValue);
+        var eastSlicePlane = new Plane(longSlicePlaneNormal, -eastSliceValue);
+        var northSlicePlane = new Plane(latSlicePlaneNormal, -northSliceValue);
+        var southSlicePlane = new Plane(latSlicePlaneNormal, -southSliceValue);
+
+        var slicePlanes = [ westSlicePlane, eastSlicePlane, northSlicePlane, southSlicePlane ];
+
+        var originalVertices = new Float32Array(parameters.vertices);
+        var originalIndices = new Uint16Array(parameters.indices);
         var originalMaximumHeight = parameters.maximumHeight;
         var originalMinimumHeight = parameters.minimumHeight;
         var center = parameters.relativeToCenter;
@@ -82,95 +78,97 @@ define([
         var cartesianVertexBuffer = [];
 
         for (var i = 0, bufferIndex = 0; i < vertexCount; i++, bufferIndex += vertexStride) {
-            // Assuming all the u, v and h buffers are equal length.
             // We're keeping all the original vertices...
-            uBuffer.push(originalVertices[bufferIndex + uIndex]);
-            vBuffer.push(originalVertices[bufferIndex + vIndex]);
-            heightBuffer.push(originalVertices[bufferIndex + hIndex]);
-            cartesianVertexBuffer.push(new Cartesian3(uBuffer[i], vBuffer[i], heightBuffer[i]));
+            cartesianVertexBuffer.push(new Cartesian3(originalVertices[bufferIndex + uIndex], originalVertices[bufferIndex + vIndex], originalVertices[bufferIndex + hIndex]));
             cartesianVertexBuffer[i].index = i;
         }
 
-        var tempBoost = 1000000;
+        // Copy the indices into an array.
+        for (i = 0; i < originalIndices.length; i++) {
+            indices.push(originalIndices[i]);
+        }
 
-        for (i = 0; i < originalIndices.length; i += quantizedStride) {
-            // Iterate through all the triangles.
-            var i0 = originalIndices[i];
-            var i1 = originalIndices[i + 1];
-            var i2 = originalIndices[i + 2];
+        var tempBoost = 500000;
 
-            var p0 = cartesianVertexBuffer[i0];
-            var p1 = cartesianVertexBuffer[i1];
-            var p2 = cartesianVertexBuffer[i2];
+        for (var s = 0; s < 4; s++) {
+            var numIndices = indices.length;
 
-            // If the triangle intersects the plane this will return the following...
-            // { positions : [p0, p1, p2, u1[, u2]],
-            //   indices : [ ... ] }
-            // Where u1 and u2 are the new vertices to be added to the triangle and
-            // the indices identify the 3 triangles.
-            var newTriangles = trianglePlaneIntersection(p0, p1, p2, slicePlane);
-            // NOTE: If newTriangles is undefined then no new triangles are required.
+            for (i = 0; i < numIndices; i += quantizedStride) {
+                // Iterate through all the triangles.
+                var i0 = indices[i];
+                var i1 = indices[i + 1];
+                var i2 = indices[i + 2];
 
-            var newVertex1, newVertex2;
-            if (defined(newTriangles)) {
-                // Then there are potentially new vertices to be added...
-                if (newTriangles.positions.length === 5) { // TODO: Magic numbers...?
-                    // 2 potential new vertices...
-                    newVertex1 = newTriangles.positions[3];
-                    newVertex2 = newTriangles.positions[4];
+                var p0 = cartesianVertexBuffer[i0];
+                var p1 = cartesianVertexBuffer[i1];
+                var p2 = cartesianVertexBuffer[i2];
 
-                    // TODO: Assumes vertical slicing. So new vertices should have unique v (or y) values to use in the map.
+                // If the triangle intersects the plane this will return the following...
+                // { positions : [p0, p1, p2, u1[, u2]],
+                //   indices : [ ... ] }
+                // Where u1 and u2 are the new vertices to be added to the triangle and
+                // the indices identify the 3 triangles.
+                var newTriangles = trianglePlaneIntersection(p0, p1, p2, slicePlanes[s]);
+                // NOTE: If newTriangles is undefined then no new triangles are required.
 
-                    // Check which vertices are actually new. Both, one or neither...
-                    if (!defined(newVerticesMap[getKeyFromVertex(newVertex1)])) {
-                        newVerticesMap[getKeyFromVertex(newVertex1)] = newVertex1;
-                        newVertex1.index = uBuffer.length;
-                        uBuffer.push(newVertex1.x);
-                        vBuffer.push(newVertex1.y);
-                        heightBuffer.push(newVertex1.z + tempBoost);
-                    } else {
-                        newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
+                var newVertex1, newVertex2;
+                if (defined(newTriangles)) {
+                    // Then there are potentially new vertices to be added...
+                    if (newTriangles.positions.length === 5) { // TODO: Magic numbers...?
+                        // 2 potential new vertices...
+                        newVertex1 = newTriangles.positions[3];
+                        newVertex2 = newTriangles.positions[4];
+
+                        // TODO: Assumes vertical slicing. So new vertices should have unique v (or y) values to use in the map.
+
+                        // Check which vertices are actually new. Both, one or neither...
+                        if (!defined(newVerticesMap[getKeyFromVertex(newVertex1)])) {
+                            newVerticesMap[getKeyFromVertex(newVertex1)] = newVertex1;
+                            newVertex1.index = cartesianVertexBuffer.length;
+                            newVertex1.z = tempBoost;
+                            cartesianVertexBuffer.push(newVertex1);
+                        } else {
+                            newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
+                        }
+
+                        if (!defined(newVerticesMap[getKeyFromVertex(newVertex2)])) {
+                            newVerticesMap[getKeyFromVertex(newVertex2)] = newVertex2;
+                            newVertex2.index = cartesianVertexBuffer.length;
+                            newVertex2.z = tempBoost;
+                            cartesianVertexBuffer.push(newVertex2);
+                        } else {
+                            newVertex2.index = newVerticesMap[getKeyFromVertex(newVertex2)].index;
+                        }
+
+                    } else if (newTriangles.positions.length === 4) { // TODO: Magic numbers...?
+                        // 1 potential new vertex...
+
+                        newVertex1 = newTriangles.positions[3];
+                        // Check which vertices are actually new. Both, one or neither...
+                        if (!defined(newVerticesMap[getKeyFromVertex(newVertex1)])) {
+                            newVerticesMap[getKeyFromVertex(newVertex1)] = newVertex1;
+                            newVertex1.index = cartesianVertexBuffer.length;
+                            newVertex1.z = tempBoost;
+                            cartesianVertexBuffer.push(newVertex1);
+                        } else {
+                            newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
+                        }
+
                     }
 
-                    if (!defined(newVerticesMap[getKeyFromVertex(newVertex2)])) {
-                        newVerticesMap[getKeyFromVertex(newVertex2)] = newVertex2;
-                        newVertex2.index = uBuffer.length;
-                        uBuffer.push(newVertex2.x);
-                        vBuffer.push(newVertex2.y);
-                        heightBuffer.push(newVertex2.z + tempBoost);
-                    } else {
-                        newVertex2.index = newVerticesMap[getKeyFromVertex(newVertex2)].index;
+                    // Go through the new triangles adding them to the index buffer...
+                    for (var j = 0; j < newTriangles.indices.length; j += 3) {
+                        indices.push(newTriangles.positions[newTriangles.indices[j]].index);
+                        indices.push(newTriangles.positions[newTriangles.indices[j + 1]].index);
+                        indices.push(newTriangles.positions[newTriangles.indices[j + 2]].index);
                     }
 
-                } else if (newTriangles.positions.length === 4) { // TODO: Magic numbers...?
-                    // 1 potential new vertex...
-
-                    newVertex1 = newTriangles.positions[3];
-                    // Check which vertices are actually new. Both, one or neither...
-                    if (!defined(newVerticesMap[getKeyFromVertex(newVertex1)])) {
-                        newVerticesMap[getKeyFromVertex(newVertex1)] = newVertex1;
-                        newVertex1.index = uBuffer.length;
-                        uBuffer.push(newVertex1.x);
-                        vBuffer.push(newVertex1.y);
-                        heightBuffer.push(newVertex1.z + tempBoost);
-                    } else {
-                        newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
-                    }
-
+                } else {
+                    // No new triangles... push the original indices onto the index buffer.
+                    indices.push(i0);
+                    indices.push(i1);
+                    indices.push(i2);
                 }
-
-                // Go through the new triangles adding them to the index buffer...
-                for (var j = 0; j < newTriangles.indices.length; j += 3) {
-                    indices.push(newTriangles.positions[newTriangles.indices[j]].index);
-                    indices.push(newTriangles.positions[newTriangles.indices[j + 1]].index);
-                    indices.push(newTriangles.positions[newTriangles.indices[j + 2]].index);
-                }
-
-            } else {
-                // No new triangles... push the original indices onto the index buffer.
-                indices.push(i0);
-                indices.push(i1);
-                indices.push(i2);
             }
         }
 
@@ -180,22 +178,22 @@ define([
         var northIndices = [];
 
         // TODO: Could move this code up to when creating the new vertices...
-        for (i = 0; i < uBuffer.length; ++i) {
-            if (uBuffer[i] === 0) {
+        for (i = 0; i < cartesianVertexBuffer.length; ++i) {
+            if (cartesianVertexBuffer[i].x === 0) {
                 westIndices.push(i);
-            } else if (uBuffer[i] === 1.0) {
+            } else if (cartesianVertexBuffer[i].x === 1.0) {
                 eastIndices.push(i);
             }
 
-            if (vBuffer[i] === 0.0) {
+            if (cartesianVertexBuffer[i].y === 0.0) {
                 southIndices.push(i);
-            } else if (vBuffer[i] === 1.0) {
+            } else if (cartesianVertexBuffer[i].y === 1.0) {
                 northIndices.push(i);
             }
 
         }
 
-        var vertexBuffer = new Float32Array(uBuffer.length * vertexStride);
+        var vertexBuffer = new Float32Array(cartesianVertexBuffer.length * vertexStride);
         var ellipsoid = Ellipsoid.clone(parameters.ellipsoid);
         var extent = parameters.extent;
         var west = extent.west;
@@ -205,18 +203,18 @@ define([
 
         // Make the full vertex buffer with new vertices included.
         for (i = 0, bufferIndex = 0; bufferIndex < vertexBuffer.length; ++i, bufferIndex += vertexStride) {
-            cartographicScratch.longitude = CesiumMath.lerp(west, east, uBuffer[i]);
-            cartographicScratch.latitude = CesiumMath.lerp(south, north, vBuffer[i]);
-            cartographicScratch.height = heightBuffer[i];
+            cartographicScratch.longitude = CesiumMath.lerp(west, east, cartesianVertexBuffer[i].x);
+            cartographicScratch.latitude = CesiumMath.lerp(south, north, cartesianVertexBuffer[i].y);
+            cartographicScratch.height = cartesianVertexBuffer[i].z;
 
             ellipsoid.cartographicToCartesian(cartographicScratch, cartesian3Scratch);
 
             vertexBuffer[bufferIndex + xIndex] = cartesian3Scratch.x - center.x;
             vertexBuffer[bufferIndex + yIndex] = cartesian3Scratch.y - center.y;
             vertexBuffer[bufferIndex + zIndex] = cartesian3Scratch.z - center.z;
-            vertexBuffer[bufferIndex + hIndex] = heightBuffer[i];
-            vertexBuffer[bufferIndex + uIndex] = uBuffer[i];
-            vertexBuffer[bufferIndex + vIndex] = vBuffer[i];
+            vertexBuffer[bufferIndex + hIndex] = cartesianVertexBuffer[i].z;
+            vertexBuffer[bufferIndex + uIndex] = cartesianVertexBuffer[i].x;
+            vertexBuffer[bufferIndex + vIndex] = cartesianVertexBuffer[i].y;
         }
 
         var indicesTypedArray = new Uint16Array(indices);
@@ -230,6 +228,13 @@ define([
             northIndices : northIndices
         };
     };
+
+    function insertVertices(uBuffer, vBuffer, heightBuffer, originalIndices, cartesianVertexBuffer, slicePlane) {
+        var outputIndices = [];
+
+
+        return outputIndices;
+    }
 
     function getKeyFromVertex(vertex) {
         return vertex.x.toString() + vertex.y.toString() + vertex.z.toString();
@@ -522,5 +527,5 @@ define([
         return undefined;
     }
 
-    return insertVerticesAtVerticalSlice;
+    return insertVerticesAlongExtent;
 });

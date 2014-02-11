@@ -12,7 +12,8 @@ define([
         '../Core/Intersections2D',
         '../Core/Math',
         '../Core/TaskProcessor',
-        '../Scene/insertVerticesAtVerticalSlice',
+        '../Core/Extent',
+        '../Scene/insertVerticesAlongExtent',
         './GeographicTilingScheme',
         './HeightmapTerrainData',
         './TerrainMesh',
@@ -31,7 +32,8 @@ define([
         Intersections2D,
         CesiumMath,
         TaskProcessor,
-        insertVerticesAtVerticalSlice,
+        Extent,
+        insertVerticesAlongExtent,
         GeographicTilingScheme,
         HeightmapTerrainData,
         TerrainMesh,
@@ -242,11 +244,20 @@ define([
 
         var that = this;
         return when(verticesPromise, function(result) {
+            var sliceExtent = new Extent(   CesiumMath.toRadians(10.0),
+                                            CesiumMath.toRadians(-10.0),
+                                            CesiumMath.toRadians(40.0),
+                                            CesiumMath.toRadians(40.0));
+
+            var tileContainsExtent = !extent.intersectWith(sliceExtent).isEmpty();
+
+//            console.log("L" + level + "X" + x + "Y" + y + ": " + tileContainsExtent);
+
             var slicedResult = result;
 
-            if (x === 2 && y === 2 && level === 2) {
-                slicedResult = insertVerticesAtVerticalSlice({
-                    sliceValue : 0.432,
+            if (tileContainsExtent) {
+                slicedResult = insertVerticesAlongExtent({
+                    sliceExtent : sliceExtent,
                     vertices : slicedResult.vertices,
                     indices : slicedResult.indices,
                     maximumHeight : result.minimumHeight,

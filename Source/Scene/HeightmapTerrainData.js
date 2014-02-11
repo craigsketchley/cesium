@@ -6,7 +6,7 @@ define([
         '../Core/HeightmapTessellator',
         '../Core/Math',
         '../Core/TaskProcessor',
-        '../Scene/insertVerticesAtVerticalSlice',
+        '../Scene/insertVerticesAlongExtent',
         './GeographicTilingScheme',
         './TerrainMesh',
         './TerrainProvider',
@@ -23,7 +23,7 @@ define([
         HeightmapTessellator,
         CesiumMath,
         TaskProcessor,
-        insertVerticesAtVerticalSlice,
+        insertVerticesAlongExtent,
         GeographicTilingScheme,
         TerrainMesh,
         TerrainProvider,
@@ -198,14 +198,25 @@ define([
             return undefined;
         }
 
+
         return when(verticesPromise, function(result) {
+
             result.indices = TerrainProvider.getRegularGridIndices(result.gridWidth, result.gridHeight);
+
+            var sliceExtent = new Extent(   CesiumMath.toRadians(10.0),
+                    CesiumMath.toRadians(-10.0),
+                    CesiumMath.toRadians(40.0),
+                    CesiumMath.toRadians(40.0));
+
+            var tileContainsExtent = !extent.intersectWith(sliceExtent).isEmpty();
+
+            //console.log("L" + level + "X" + x + "Y" + y + ": " + tileContainsExtent);
 
             var slicedResult = result;
 
-            if (x === 2 && y === 2 && level === 2) {
-                slicedResult = insertVerticesAtVerticalSlice({
-                    sliceValue : 0.432,
+            if (tileContainsExtent) {
+                slicedResult = insertVerticesAlongExtent({
+                    sliceExtent : sliceExtent,
                     vertices : slicedResult.vertices,
                     indices : slicedResult.indices,
                     maximumHeight : result.minimumHeight,
@@ -215,6 +226,8 @@ define([
                     relativeToCenter : center
                 });
             }
+
+
 
             return new TerrainMesh(
                     center,
