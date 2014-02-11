@@ -12,6 +12,7 @@ define([
         '../Core/Intersections2D',
         '../Core/Math',
         '../Core/TaskProcessor',
+        '../Scene/insertVerticesAtVerticalSlice',
         './GeographicTilingScheme',
         './HeightmapTerrainData',
         './TerrainMesh',
@@ -30,6 +31,7 @@ define([
         Intersections2D,
         CesiumMath,
         TaskProcessor,
+        insertVerticesAtVerticalSlice,
         GeographicTilingScheme,
         HeightmapTerrainData,
         TerrainMesh,
@@ -240,10 +242,25 @@ define([
 
         var that = this;
         return when(verticesPromise, function(result) {
+            var slicedResult = result;
+
+            if (x === 2 && y === 2 && level === 2) {
+                slicedResult = insertVerticesAtVerticalSlice({
+                    sliceValue : 0.432,
+                    vertices : slicedResult.vertices,
+                    indices : slicedResult.indices,
+                    maximumHeight : result.minimumHeight,
+                    minimumHeight : result.maximumHeight,
+                    extent : extent,
+                    ellipsoid : ellipsoid,
+                    relativeToCenter : that._boundingSphere.center
+                });
+            }
+
             return new TerrainMesh(
                     that._boundingSphere.center,
-                    new Float32Array(result.vertices),
-                    new Uint16Array(result.indices),
+                    new Float32Array(slicedResult.vertices),
+                    new Uint16Array(slicedResult.indices),
                     that._minimumHeight,
                     that._maximumHeight,
                     that._boundingSphere,

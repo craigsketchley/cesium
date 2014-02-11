@@ -45,33 +45,6 @@ require([
     }(Person));*/
 
 
-
-
-    var oldTerrainMesh = Cesium.TerrainMesh;
-    console.log(Cesium.TerrainMesh.prototype.constructor.toString());
-
-    Cesium.TerrainMesh.prototype.constructor = function TerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace) {
-        /**
-         * parameters.sliceValue
-         * parameters.vertices
-         * parameters.indices
-         * parameters.maximumHeight
-         * parameters.minimumHeight
-         * parameters.extent
-         * parameters.elipsoid
-         * parameters.relativeToCenter
-         */
-
-        // Modify the vertices coming in...
-//        Cesium.insertVerticesAtVerticalSlice();
-        console.log("I would insert my own terrainMesh function here!");
-
-        // Use the original terrain mesh constructor.
-        return oldTerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace);
-    };
-    console.log(Cesium.TerrainMesh.toString());
-
-
     var viewer = new Cesium.Viewer('cesiumContainer');
 
     var scene = viewer.scene;
@@ -79,8 +52,8 @@ require([
     centralBody.depthTestAgainstTerrain = true;
 
     centralBody.terrainProvider = new Cesium.CesiumTerrainProvider({
-//        url : 'http://cesiumjs.org/stk-terrain/tilesets/GTOPO30/tiles'
-        url : 'http://cesiumjs.org/smallterrain'
+        url : 'http://cesiumjs.org/stk-terrain/tilesets/GTOPO30/tiles'
+//        url : 'http://cesiumjs.org/smallterrain'
     });
 
     var tp = new TitlePane({

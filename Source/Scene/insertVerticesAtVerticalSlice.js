@@ -10,8 +10,8 @@ define([
     ], function(
         Cartesian3,
         Cartographic,
-        Plane,
         CesiumMath,
+        Plane,
         defined,
         DeveloperError,
         Ellipsoid) {
@@ -66,6 +66,9 @@ define([
         // TODO: Assuming a vertical slice to start with...
         // TODO: Validate the sign of the plane distance value.
         var slicePlaneNormal = new Cartesian3(1, 0, 0); // u unit vect. => vertical slice.
+        console.log(slicePlaneNormal);
+        console.log(-parameters.sliceValue);
+        console.log(new Plane(slicePlaneNormal, -parameters.sliceValue));
         var slicePlane = new Plane(slicePlaneNormal, -parameters.sliceValue); // TODO: Assuming slice value is [0,1] for the tile.
 
         var newVerticesMap = {};
@@ -91,6 +94,8 @@ define([
             cartesianVertexBuffer[i].index = i;
         }
 
+        var addExtraVertices = true;
+
         for (i = 0; i < originalIndices.length; i += quantizedStride) {
             // Iterate through all the triangles.
             var i0 = originalIndices[i];
@@ -110,9 +115,9 @@ define([
             // NOTE: If newTriangles is undefined then no new triangles are required.
 
             var newVertex1, newVertex2;
-            if (defined(newTriangles)) {
+            if (defined(newTriangles) && addExtraVertices) {
                 // Then there are potentially new vertices to be added...
-                if (newTriangles.positions.length === 5) { // TODO: Magic numbers...
+                if (newTriangles.positions.length === 5) { // TODO: Magic numbers...?
                     // 2 potential new vertices...
                     newVertex1 = newTriangles.positions[3];
                     newVertex2 = newTriangles.positions[4];
@@ -125,7 +130,7 @@ define([
                         newVertex1.index = uBuffer.length;
                         uBuffer.push(newVertex1.x);
                         vBuffer.push(newVertex1.y);
-                        heightBuffer.push(newVertex1.z);
+                        heightBuffer.push(newVertex1.z + 1000000);
                     } else {
                         newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
                     }
@@ -135,12 +140,12 @@ define([
                         newVertex2.index = uBuffer.length;
                         uBuffer.push(newVertex2.x);
                         vBuffer.push(newVertex2.y);
-                        heightBuffer.push(newVertex2.z);
+                        heightBuffer.push(newVertex2.z + 1000000);
                     } else {
                         newVertex2.index = newVerticesMap[getKeyFromVertex(newVertex2)].index;
                     }
 
-                } else if (newTriangles.positions.length === 4) {
+                } else if (newTriangles.positions.length === 4) { // TODO: Magic numbers...?
                     // 1 potential new vertex...
 
                     newVertex1 = newTriangles.positions[3];
@@ -150,7 +155,7 @@ define([
                         newVertex1.index = uBuffer.length;
                         uBuffer.push(newVertex1.x);
                         vBuffer.push(newVertex1.y);
-                        heightBuffer.push(newVertex1.z);
+                        heightBuffer.push(newVertex1.z + 1000000);
                     } else {
                         newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
                     }
@@ -166,11 +171,10 @@ define([
 
             } else {
                 // No new triangles... push the original indices onto the index buffer.
-				indices.push(i0);
-				indices.push(i1);
-				indices.push(i2);
-			}
-
+                indices.push(i0);
+                indices.push(i1);
+                indices.push(i2);
+            }
         }
 
         var westIndices = [];
@@ -228,12 +232,11 @@ define([
             eastIndices : eastIndices,
             northIndices : northIndices
         };
-    }
+    };
 
     function getKeyFromVertex(vertex) {
         return vertex.x.toString() + vertex.x.toString() + vertex.z.toString();
     }
-
 
     var lineSegmentPlaneDifference = new Cartesian3();
 
@@ -516,7 +519,7 @@ define([
             }
         }
 
-        // TODO: I DON'T THINK IS EVER REACHED.
+        // TODO: I DON'T THINK THIS IS EVER REACHED.
         // if numBehind is 3, the triangle is completely behind the plane;
         // otherwise, it is completely in front (numBehind is 0).
         return undefined;
