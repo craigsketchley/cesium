@@ -244,14 +244,12 @@ define([
 
         var that = this;
         return when(verticesPromise, function(result) {
-            var sliceExtent = new Extent(   CesiumMath.toRadians(10.0),
-                                            CesiumMath.toRadians(-10.0),
-                                            CesiumMath.toRadians(40.0),
-                                            CesiumMath.toRadians(40.0));
+            var sliceExtent = new Extent(   CesiumMath.toRadians(6.5),
+                                            CesiumMath.toRadians(44.0),
+                                            CesiumMath.toRadians(16.5),
+                                            CesiumMath.toRadians(53.0));
 
             var tileContainsExtent = !extent.intersectWith(sliceExtent).isEmpty();
-
-//            console.log("L" + level + "X" + x + "Y" + y + ": " + tileContainsExtent);
 
             var slicedResult = result;
 
@@ -260,6 +258,7 @@ define([
                     sliceExtent : sliceExtent,
                     vertices : slicedResult.vertices,
                     indices : slicedResult.indices,
+                    stepValue : 0.005,
                     maximumHeight : result.minimumHeight,
                     minimumHeight : result.maximumHeight,
                     extent : extent,

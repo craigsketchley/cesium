@@ -51,20 +51,37 @@ define([
 
         var newVerticesMap = {};
 
-        var westSliceValue = (parameters.sliceExtent.west - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
-        var eastSliceValue = (parameters.sliceExtent.east - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
-        var northSliceValue = (parameters.sliceExtent.north - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
-        var southSliceValue = (parameters.sliceExtent.south - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
+        var westOuterSliceValue = (parameters.sliceExtent.west - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
+        var eastOuterSliceValue = (parameters.sliceExtent.east - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
+        var northOuterSliceValue = (parameters.sliceExtent.north - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
+        var southOuterSliceValue = (parameters.sliceExtent.south - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
+
+        var westInnerSliceValue = ((parameters.sliceExtent.west + parameters.stepValue) - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
+        var eastInnerSliceValue = ((parameters.sliceExtent.east - parameters.stepValue) - parameters.extent.west) / (parameters.extent.east - parameters.extent.west);
+        var northInnerSliceValue = ((parameters.sliceExtent.north - parameters.stepValue) - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
+        var southInnerSliceValue = ((parameters.sliceExtent.south + parameters.stepValue) - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
 
         var longSlicePlaneNormal = new Cartesian3(1, 0, 0); // u unit vect. => vertical slice.
         var latSlicePlaneNormal = new Cartesian3(0, 1, 0); // v unit vect. => horizontal slice.
 
-        var westSlicePlane = new Plane(longSlicePlaneNormal, -westSliceValue);
-        var eastSlicePlane = new Plane(longSlicePlaneNormal, -eastSliceValue);
-        var northSlicePlane = new Plane(latSlicePlaneNormal, -northSliceValue);
-        var southSlicePlane = new Plane(latSlicePlaneNormal, -southSliceValue);
+        var westOuterSlicePlane = new Plane(longSlicePlaneNormal, -westOuterSliceValue);
+        var eastOuterSlicePlane = new Plane(longSlicePlaneNormal, -eastOuterSliceValue);
+        var northOuterSlicePlane = new Plane(latSlicePlaneNormal, -northOuterSliceValue);
+        var southOuterSlicePlane = new Plane(latSlicePlaneNormal, -southOuterSliceValue);
 
-        var slicePlanes = [ westSlicePlane, eastSlicePlane, northSlicePlane, southSlicePlane ];
+        var westInnerSlicePlane = new Plane(longSlicePlaneNormal, -westInnerSliceValue);
+        var eastInnerSlicePlane = new Plane(longSlicePlaneNormal, -eastInnerSliceValue);
+        var northInnerSlicePlane = new Plane(latSlicePlaneNormal, -northInnerSliceValue);
+        var southInnerSlicePlane = new Plane(latSlicePlaneNormal, -southInnerSliceValue);
+
+        var slicePlanes = [ westInnerSlicePlane,
+                            eastInnerSlicePlane,
+                            northInnerSlicePlane,
+                            southInnerSlicePlane,
+                            westOuterSlicePlane,
+                            eastOuterSlicePlane,
+                            northOuterSlicePlane,
+                            southOuterSlicePlane ];
 
         var originalVertices = new Float32Array(parameters.vertices);
         var originalIndices = new Uint16Array(parameters.indices);
@@ -88,10 +105,12 @@ define([
             indices.push(originalIndices[i]);
         }
 
-        var tempBoost = 500000;
+        var tempBoost = 200000;
+        var tempIndices;
 
-        for (var s = 0; s < 4; s++) {
+        for (var s = 0; s < slicePlanes.length; s++) {
             var numIndices = indices.length;
+            tempIndices = [];
 
             for (i = 0; i < numIndices; i += quantizedStride) {
                 // Iterate through all the triangles.
@@ -125,7 +144,6 @@ define([
                         if (!defined(newVerticesMap[getKeyFromVertex(newVertex1)])) {
                             newVerticesMap[getKeyFromVertex(newVertex1)] = newVertex1;
                             newVertex1.index = cartesianVertexBuffer.length;
-                            newVertex1.z = tempBoost;
                             cartesianVertexBuffer.push(newVertex1);
                         } else {
                             newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
@@ -134,7 +152,6 @@ define([
                         if (!defined(newVerticesMap[getKeyFromVertex(newVertex2)])) {
                             newVerticesMap[getKeyFromVertex(newVertex2)] = newVertex2;
                             newVertex2.index = cartesianVertexBuffer.length;
-                            newVertex2.z = tempBoost;
                             cartesianVertexBuffer.push(newVertex2);
                         } else {
                             newVertex2.index = newVerticesMap[getKeyFromVertex(newVertex2)].index;
@@ -148,7 +165,6 @@ define([
                         if (!defined(newVerticesMap[getKeyFromVertex(newVertex1)])) {
                             newVerticesMap[getKeyFromVertex(newVertex1)] = newVertex1;
                             newVertex1.index = cartesianVertexBuffer.length;
-                            newVertex1.z = tempBoost;
                             cartesianVertexBuffer.push(newVertex1);
                         } else {
                             newVertex1.index = newVerticesMap[getKeyFromVertex(newVertex1)].index;
@@ -158,18 +174,19 @@ define([
 
                     // Go through the new triangles adding them to the index buffer...
                     for (var j = 0; j < newTriangles.indices.length; j += 3) {
-                        indices.push(newTriangles.positions[newTriangles.indices[j]].index);
-                        indices.push(newTriangles.positions[newTriangles.indices[j + 1]].index);
-                        indices.push(newTriangles.positions[newTriangles.indices[j + 2]].index);
+                        tempIndices.push(newTriangles.positions[newTriangles.indices[j]].index);
+                        tempIndices.push(newTriangles.positions[newTriangles.indices[j + 1]].index);
+                        tempIndices.push(newTriangles.positions[newTriangles.indices[j + 2]].index);
                     }
 
                 } else {
                     // No new triangles... push the original indices onto the index buffer.
-                    indices.push(i0);
-                    indices.push(i1);
-                    indices.push(i2);
+                    tempIndices.push(i0);
+                    tempIndices.push(i1);
+                    tempIndices.push(i2);
                 }
             }
+            indices = tempIndices;
         }
 
         var westIndices = [];
@@ -189,6 +206,11 @@ define([
                 southIndices.push(i);
             } else if (cartesianVertexBuffer[i].y === 1.0) {
                 northIndices.push(i);
+            }
+
+            if ((cartesianVertexBuffer[i].x >= westInnerSliceValue && cartesianVertexBuffer[i].x <= eastInnerSliceValue) &&
+                    (cartesianVertexBuffer[i].y >= southInnerSliceValue && cartesianVertexBuffer[i].y <= northInnerSliceValue)) {
+                cartesianVertexBuffer[i].z -= 200000;
             }
 
         }

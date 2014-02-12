@@ -204,7 +204,7 @@ define([
             result.indices = TerrainProvider.getRegularGridIndices(result.gridWidth, result.gridHeight);
 
             var sliceExtent = new Extent(   CesiumMath.toRadians(10.0),
-                    CesiumMath.toRadians(-10.0),
+                    CesiumMath.toRadians(10.0),
                     CesiumMath.toRadians(40.0),
                     CesiumMath.toRadians(40.0));
 
@@ -219,6 +219,7 @@ define([
                     sliceExtent : sliceExtent,
                     vertices : slicedResult.vertices,
                     indices : slicedResult.indices,
+                    stepValue : 0.005,
                     maximumHeight : result.minimumHeight,
                     minimumHeight : result.maximumHeight,
                     extent : extent,

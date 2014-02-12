@@ -1,3 +1,29 @@
+var _myTerrainMesh;
+
+define('Scene/TerrainMesh',[],function() {
+    "use strict";
+    var TerrainMesh = function TerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace) {
+
+
+        this.center = center;
+
+        this.vertices = vertices;
+
+        this.indices = indices;
+
+        this.minimumHeight = minimumHeight;
+
+        this.maximumHeight = maximumHeight;
+
+        this.boundingSphere3D = boundingSphere3D;
+
+        this.occludeePointInScaledSpace = occludeePointInScaledSpace;
+    };
+
+    return TerrainMesh;
+});
+
+
 /*global require,document*/
 require([
     'Cesium',
@@ -13,37 +39,8 @@ require([
     CheckBox) {
     "use strict";
 
-/*    var clone = function clone(func) {
-        return function(obj) {
-            func.prototype = obj;
-            return new func;
-        };
-    }(function(){});
-
-    function extend(A, B){
-        A.prototype = clone(B.prototype);
-        A.prototype.constructor = A;
-        return A;
-    };
-
-    function Person(first, last) {
-        this.firstName = first;
-        this.lastName = last;
-    };
-
-    Person.prototype.getFullName = function() {
-        return this.firstName + ' ' + this.lastName;
-    };
-
-    var p1 = new Person('FN_1', 'LN_1');
-
-    function onPersonCreate() {
-        alert('Person called '+ this.getFullName() +' created.');
-    }
-    Person = (function(Person) {
-        return extend(function() { Person.apply(this, arguments); onPersonCreate.call(this); }, Person);
-    }(Person));*/
-
+    console.log(Cesium.TerrainMesh.toString());
+    console.log("HElllo!");
 
     var viewer = new Cesium.Viewer('cesiumContainer');
 
