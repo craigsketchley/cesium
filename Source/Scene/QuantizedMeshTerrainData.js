@@ -177,6 +177,11 @@ define([
         this._uValues = this._quantizedVertices.subarray(0, vertexCount);
         this._vValues = this._quantizedVertices.subarray(vertexCount, 2 * vertexCount);
         this._heightValues = this._quantizedVertices.subarray(2 * vertexCount, 3 * vertexCount);
+
+        this.sliceExtent = new Extent(  CesiumMath.toRadians(6.5),
+                                        CesiumMath.toRadians(44.0),
+                                        CesiumMath.toRadians(16.5),
+                                        CesiumMath.toRadians(53.0));
     };
 
     function toArray(typedArray) {
@@ -244,27 +249,25 @@ define([
 
         var that = this;
         return when(verticesPromise, function(result) {
-            var sliceExtent = new Extent(   CesiumMath.toRadians(6.5),
-                                            CesiumMath.toRadians(44.0),
-                                            CesiumMath.toRadians(16.5),
-                                            CesiumMath.toRadians(53.0));
-
-            var tileContainsExtent = !extent.intersectWith(sliceExtent).isEmpty();
-
             var slicedResult = result;
 
-            if (tileContainsExtent) {
-                slicedResult = insertVerticesAlongExtent({
-                    sliceExtent : sliceExtent,
-                    vertices : slicedResult.vertices,
-                    indices : slicedResult.indices,
-                    stepValue : 0.005,
-                    maximumHeight : result.minimumHeight,
-                    minimumHeight : result.maximumHeight,
-                    extent : extent,
-                    ellipsoid : ellipsoid,
-                    relativeToCenter : that._boundingSphere.center
-                });
+            if (defined(that.sliceExtent)) {
+                var tileContainsExtent = !extent.intersectWith(sliceExtent).isEmpty();
+
+
+                if (tileContainsExtent) {
+                    slicedResult = insertVerticesAlongExtent({
+                        sliceExtent : that.sliceExtent,
+                        vertices : slicedResult.vertices,
+                        indices : slicedResult.indices,
+                        stepValue : 0.005,
+                        maximumHeight : result.minimumHeight,
+                        minimumHeight : result.maximumHeight,
+                        extent : extent,
+                        ellipsoid : ellipsoid,
+                        relativeToCenter : that._boundingSphere.center
+                    });
+                }
             }
 
             return new TerrainMesh(

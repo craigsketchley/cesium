@@ -208,6 +208,7 @@ define([
                 northIndices.push(i);
             }
 
+            // TODO: Temp code to highlight the extent region and new vertices. Done is shader later...
             if ((cartesianVertexBuffer[i].x >= westInnerSliceValue && cartesianVertexBuffer[i].x <= eastInnerSliceValue) &&
                     (cartesianVertexBuffer[i].y >= southInnerSliceValue && cartesianVertexBuffer[i].y <= northInnerSliceValue)) {
                 cartesianVertexBuffer[i].z -= 200000;

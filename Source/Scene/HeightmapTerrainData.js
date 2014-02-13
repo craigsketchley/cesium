@@ -203,10 +203,10 @@ define([
 
             result.indices = TerrainProvider.getRegularGridIndices(result.gridWidth, result.gridHeight);
 
-            var sliceExtent = new Extent(   CesiumMath.toRadians(10.0),
-                    CesiumMath.toRadians(10.0),
-                    CesiumMath.toRadians(40.0),
-                    CesiumMath.toRadians(40.0));
+            var sliceExtent = new Extent(   CesiumMath.toRadians(6.5),
+                    CesiumMath.toRadians(44.0),
+                    CesiumMath.toRadians(16.5),
+                    CesiumMath.toRadians(53.0));
 
             var tileContainsExtent = !extent.intersectWith(sliceExtent).isEmpty();
 
