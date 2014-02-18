@@ -252,8 +252,8 @@ define([
             var slicedResult = result;
 
             if (defined(that.sliceExtent)) {
-                var tileContainsExtent = !extent.intersectWith(sliceExtent).isEmpty();
-
+                // Check if the current tile contains any part of the extent
+                var tileContainsExtent = !extent.intersectWith(that.sliceExtent).isEmpty();
 
                 if (tileContainsExtent) {
                     slicedResult = insertVerticesAlongExtent({

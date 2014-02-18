@@ -1,25 +1,25 @@
-
-define('Scene/TerrainMesh',[],function() {
-    "use strict";
-    var TerrainMesh = function TerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace) {
-
-        this.center = center;
-
-        this.vertices = vertices;
-
-        this.indices = indices;
-
-        this.minimumHeight = minimumHeight;
-
-        this.maximumHeight = maximumHeight;
-
-        this.boundingSphere3D = boundingSphere3D;
-
-        this.occludeePointInScaledSpace = occludeePointInScaledSpace;
-    };
-
-    return TerrainMesh;
-});
+//
+//define('Scene/TerrainMesh',[],function() {
+//    "use strict";
+//    var TerrainMesh = function TerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace) {
+//
+//        this.center = center;
+//
+//        this.vertices = vertices;
+//
+//        this.indices = indices;
+//
+//        this.minimumHeight = minimumHeight;
+//
+//        this.maximumHeight = maximumHeight;
+//
+//        this.boundingSphere3D = boundingSphere3D;
+//
+//        this.occludeePointInScaledSpace = occludeePointInScaledSpace;
+//    };
+//
+//    return TerrainMesh;
+//});
 
 
 /*global require,document*/
@@ -46,8 +46,8 @@ require([
     centralBody.depthTestAgainstTerrain = true;
 
     centralBody.terrainProvider = new Cesium.CesiumTerrainProvider({
-//        url : 'http://cesiumjs.org/stk-terrain/tilesets/GTOPO30/tiles'
-        url : 'http://cesiumjs.org/smallterrain'
+        url : 'http://cesiumjs.org/stk-terrain/tilesets/GTOPO30/tiles'
+//        url : 'http://cesiumjs.org/smallterrain'
     });
 
     var tp = new TitlePane({

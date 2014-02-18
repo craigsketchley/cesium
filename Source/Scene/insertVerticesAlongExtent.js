@@ -61,9 +61,10 @@ define([
         var northInnerSliceValue = ((parameters.sliceExtent.north - parameters.stepValue) - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
         var southInnerSliceValue = ((parameters.sliceExtent.south + parameters.stepValue) - parameters.extent.south) / (parameters.extent.north - parameters.extent.south);
 
-        var longSlicePlaneNormal = new Cartesian3(1, 0, 0); // u unit vect. => vertical slice.
-        var latSlicePlaneNormal = new Cartesian3(0, 1, 0); // v unit vect. => horizontal slice.
+        var longSlicePlaneNormal = new Cartesian3(1, 0, 0); // u unit normal vect. => vertical slice.
+        var latSlicePlaneNormal = new Cartesian3(0, 1, 0); // v unit normal vect. => horizontal slice.
 
+        // The 8 slice planes that make up the extent, both inner and outer.
         var westOuterSlicePlane = new Plane(longSlicePlaneNormal, -westOuterSliceValue);
         var eastOuterSlicePlane = new Plane(longSlicePlaneNormal, -eastOuterSliceValue);
         var northOuterSlicePlane = new Plane(latSlicePlaneNormal, -northOuterSliceValue);
@@ -209,10 +210,10 @@ define([
             }
 
             // TODO: Temp code to highlight the extent region and new vertices. Done is shader later...
-            if ((cartesianVertexBuffer[i].x >= westInnerSliceValue && cartesianVertexBuffer[i].x <= eastInnerSliceValue) &&
-                    (cartesianVertexBuffer[i].y >= southInnerSliceValue && cartesianVertexBuffer[i].y <= northInnerSliceValue)) {
-                cartesianVertexBuffer[i].z -= 200000;
-            }
+//            if ((cartesianVertexBuffer[i].x >= westInnerSliceValue && cartesianVertexBuffer[i].x <= eastInnerSliceValue) &&
+//                    (cartesianVertexBuffer[i].y >= southInnerSliceValue && cartesianVertexBuffer[i].y <= northInnerSliceValue)) {
+//                cartesianVertexBuffer[i].z -= 200000;
+//            }
 
         }
 
