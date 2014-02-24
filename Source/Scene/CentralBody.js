@@ -10,6 +10,7 @@ define([
         '../Core/BoundingSphere',
         '../Core/Cartesian2',
         '../Core/Cartesian3',
+        '../Core/Cartesian4',
         '../Core/Cartographic',
         '../Core/ComponentDatatype',
         '../Core/Ellipsoid',
@@ -54,6 +55,7 @@ define([
         BoundingSphere,
         Cartesian2,
         Cartesian3,
+        Cartesian4,
         Cartographic,
         ComponentDatatype,
         Ellipsoid,
@@ -251,9 +253,69 @@ define([
         this._hasWaterMask = false;
         this._lightingFadeDistance = new Cartesian2(this.lightingFadeOutDistance, this.lightingFadeInDistance);
 
+        /**
+         * The distance in metres that the ground is pushed towards the centre of the CentralBody within the <code>pushExtent</code>.
+         *
+         * @type {Number}
+         * @default 0.0
+         */
+        this.pushDepth = 0.0;
+
+        /**
+         * The cartographic extent of the ground push region.
+         *
+         *  @type {Extent}
+         *  @default Extent(0.0, 0.0, 0.0, 0.0)
+         */
+        this.pushExtent = new Extent(   CesiumMath.toRadians(6.5),
+                CesiumMath.toRadians(44.0),
+                CesiumMath.toRadians(16.5),
+                CesiumMath.toRadians(53.0) );
+//        this.pushExtent = new Extent(0.0, 0.0, 0.0, 0.0);
+
+        /**
+         * The width of the transition zone used for smoothing the edge of the ground push region
+         * in cartographic radians.
+         *
+         * @type {Number}
+         * @default 0.0004
+         */
+        this.pushBlend = 0.0004;
+
+        /**
+         * The color tinting applied to the base of the ground push region.
+         *
+         * @type {Cartesian3}
+         * @default Cartesian3(1.0, 1.0, 1.0)
+         */
+        this.pushBaseTint = new Cartesian3(1.0, 1.0, 1.0);
+
+        /** The color tinting applied to the sides of the ground push region.
+        *
+        * @type {Cartesian3}
+        * @default Cartesian3(1.0, 1.0, 1.0)
+        */
+        this.pushSidesTint = new Cartesian3(1.0, 1.0, 1.0);
+
         var that = this;
 
         this._drawUniforms = {
+            u_pushDepth : function() {
+                return -that.pushDepth;
+            },
+            u_pushExtent : function() {
+                var extent = that.pushExtent;
+                return new Cartesian4(extent.west, extent.south, extent.east, extent.north);
+            },
+            u_pushBlend : function() {
+                return that.pushBlend;
+            },
+            u_pushBaseTint : function() {
+                return that.pushBaseTint;
+            },
+            u_pushSidesTint : function() {
+                return that.pushSidesTint;
+            },
             u_zoomedOutOceanSpecularIntensity : function() {
                 return that._zoomedOutOceanSpecularIntensity;
             },
@@ -663,6 +725,8 @@ define([
         var hasWaterMask = this._surface._terrainProvider.isReady() && this._surface._terrainProvider.hasWaterMask();
         var hasWaterMaskChanged = this._hasWaterMask !== hasWaterMask;
         var hasEnableLightingChanged = this._enableLighting !== this.enableLighting;
+        var applyPush = Math.abs(this.pushDepth) > 0.001;
+        var hasPushChanged = this._applyPush !== applyPush;
 
         if (!defined(this._surfaceShaderSet) ||
             !defined(this._northPoleCommand.shaderProgram) ||
@@ -671,6 +735,7 @@ define([
             projectionChanged ||
             hasWaterMaskChanged ||
             hasEnableLightingChanged ||
+            hasPushChanged ||
             (defined(this._oceanNormalMap)) !== this._showingPrettyOcean) {
 
             var getPosition3DMode = 'vec4 getPosition(vec3 position3DWC) { return getPosition3DMode(position3DWC); }';
@@ -708,6 +773,7 @@ define([
 
             this._surfaceShaderSet.baseVertexShaderString = createShaderSource({
                 defines : [
+                    (applyPush ? 'APPLY_PUSH' : ''),
                     (hasWaterMask ? 'SHOW_REFLECTIVE_OCEAN' : ''),
                     (this.enableLighting ? 'ENABLE_LIGHTING' : '')
                 ],
@@ -718,6 +784,7 @@ define([
 
             this._surfaceShaderSet.baseFragmentShaderString = createShaderSource({
                 defines : [
+                    (applyPush ? 'APPLY_PUSH' : ''),
                     (hasWaterMask ? 'SHOW_REFLECTIVE_OCEAN' : ''),
                     (showPrettyOcean ? 'SHOW_OCEAN_WAVES' : ''),
                     (this.enableLighting ? 'ENABLE_LIGHTING' : '')
@@ -735,6 +802,7 @@ define([
             this._showingPrettyOcean = defined(this._oceanNormalMap);
             this._hasWaterMask = hasWaterMask;
             this._enableLighting = this.enableLighting;
+            this._applyPush = applyPush;
         }
 
         var cameraPosition = frameState.camera.positionWC;

@@ -178,10 +178,6 @@ define([
         this._vValues = this._quantizedVertices.subarray(vertexCount, 2 * vertexCount);
         this._heightValues = this._quantizedVertices.subarray(2 * vertexCount, 3 * vertexCount);
 
-        this.sliceExtent = new Extent(  CesiumMath.toRadians(6.5),
-                                        CesiumMath.toRadians(44.0),
-                                        CesiumMath.toRadians(16.5),
-                                        CesiumMath.toRadians(53.0));
     };
 
     function toArray(typedArray) {
@@ -249,31 +245,10 @@ define([
 
         var that = this;
         return when(verticesPromise, function(result) {
-            var slicedResult = result;
-
-            if (defined(that.sliceExtent)) {
-                // Check if the current tile contains any part of the extent
-                var tileContainsExtent = !extent.intersectWith(that.sliceExtent).isEmpty();
-
-                if (tileContainsExtent) {
-                    slicedResult = insertVerticesAlongExtent({
-                        sliceExtent : that.sliceExtent,
-                        vertices : slicedResult.vertices,
-                        indices : slicedResult.indices,
-                        stepValue : 0.005,
-                        maximumHeight : result.minimumHeight,
-                        minimumHeight : result.maximumHeight,
-                        extent : extent,
-                        ellipsoid : ellipsoid,
-                        relativeToCenter : that._boundingSphere.center
-                    });
-                }
-            }
-
             return new TerrainMesh(
                     that._boundingSphere.center,
-                    new Float32Array(slicedResult.vertices),
-                    new Uint16Array(slicedResult.indices),
+                    new Float32Array(result.vertices),
+                    new Uint16Array(result.indices),
                     that._minimumHeight,
                     that._maximumHeight,
                     that._boundingSphere,

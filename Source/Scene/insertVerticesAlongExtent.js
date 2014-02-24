@@ -84,8 +84,8 @@ define([
                             northOuterSlicePlane,
                             southOuterSlicePlane ];
 
-        var originalVertices = new Float32Array(parameters.vertices);
-        var originalIndices = new Uint16Array(parameters.indices);
+        var originalVertices = parameters.vertices;
+        var originalIndices = parameters.indices;
         var originalMaximumHeight = parameters.maximumHeight;
         var originalMinimumHeight = parameters.minimumHeight;
         var center = parameters.relativeToCenter;
@@ -544,11 +544,6 @@ define([
                 }
             }
         }
-
-        // TODO: I DON'T THINK THIS IS EVER REACHED.
-        // if numBehind is 3, the triangle is completely behind the plane;
-        // otherwise, it is completely in front (numBehind is 0).
-        return undefined;
     }
 
     return insertVerticesAlongExtent;

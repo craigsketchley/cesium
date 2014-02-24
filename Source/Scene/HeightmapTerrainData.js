@@ -133,16 +133,9 @@ define([
         this._structure = structure;
         this._createdByUpsampling = defaultValue(description.createdByUpsampling, false);
         this._waterMask = description.waterMask;
-
-        this.sliceExtent = new Extent(  CesiumMath.toRadians(6.5),
-                                        CesiumMath.toRadians(44.0),
-                                        CesiumMath.toRadians(16.5),
-                                        CesiumMath.toRadians(53.0));
     };
 
     var taskProcessor = new TaskProcessor('createVerticesFromHeightmap');
-
-    var sliceExtent = new Extent(-1.2, -0.9, -0.6, -0.2);
 
     /**
      * Creates a {@link TerrainMesh} from this terrain data.
@@ -206,34 +199,10 @@ define([
         var that = this;
 
         return when(verticesPromise, function(result) {
-            result.indices = TerrainProvider.getRegularGridIndices(result.gridWidth, result.gridHeight);
-
-            var slicedResult = result;
-
-            if (defined(that.sliceExtent)) {
-                // Check if the current tile contains any part of the extent
-                var tileContainsExtent = !extent.intersectWith(that.sliceExtent).isEmpty();
-
-                if (tileContainsExtent) {
-                    slicedResult = insertVerticesAlongExtent({
-                        sliceExtent : that.sliceExtent,
-                        vertices : slicedResult.vertices,
-                        indices : slicedResult.indices,
-                        stepValue : 0.005,
-                        maximumHeight : result.minimumHeight,
-                        minimumHeight : result.maximumHeight,
-                        extent : extent,
-                        ellipsoid : ellipsoid,
-                        relativeToCenter : center
-                    });
-                }
-            }
-
-
             return new TerrainMesh(
                     center,
-                    new Float32Array(slicedResult.vertices),
-                    new Uint16Array(slicedResult.indices),
+                    new Float32Array(result.vertices),
+                    new Uint16Array(TerrainProvider.getRegularGridIndices(result.gridWidth, result.gridHeight)),
                     result.minimumHeight,
                     result.maximumHeight,
                     result.boundingSphere3D,

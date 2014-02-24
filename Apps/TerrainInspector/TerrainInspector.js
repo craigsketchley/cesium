@@ -1,27 +1,3 @@
-//
-//define('Scene/TerrainMesh',[],function() {
-//    "use strict";
-//    var TerrainMesh = function TerrainMesh(center, vertices, indices, minimumHeight, maximumHeight, boundingSphere3D, occludeePointInScaledSpace) {
-//
-//        this.center = center;
-//
-//        this.vertices = vertices;
-//
-//        this.indices = indices;
-//
-//        this.minimumHeight = minimumHeight;
-//
-//        this.maximumHeight = maximumHeight;
-//
-//        this.boundingSphere3D = boundingSphere3D;
-//
-//        this.occludeePointInScaledSpace = occludeePointInScaledSpace;
-//    };
-//
-//    return TerrainMesh;
-//});
-
-
 /*global require,document*/
 require([
     'Cesium',
@@ -37,17 +13,14 @@ require([
     CheckBox) {
     "use strict";
 
-
     var viewer = new Cesium.Viewer('cesiumContainer');
 
     var scene = viewer.scene;
-    var centralBody = scene.getPrimitives().getCentralBody();
-
+    var centralBody = scene.primitives.centralBody;
     centralBody.depthTestAgainstTerrain = true;
 
     centralBody.terrainProvider = new Cesium.CesiumTerrainProvider({
-        url : 'http://cesiumjs.org/stk-terrain/tilesets/GTOPO30/tiles'
-//        url : 'http://cesiumjs.org/smallterrain'
+        url : 'http://cesiumjs.org/smallterrain'
     });
 
     var tp = new TitlePane({
@@ -94,11 +67,11 @@ require([
         checked: Cesium.defined(tileBoundariesLayer),
         onChange: function(b) {
             if (b && !Cesium.defined(tileBoundariesLayer)) {
-                tileBoundariesLayer = centralBody.getImageryLayers().addImageryProvider(new Cesium.TileCoordinatesImageryProvider({
+                tileBoundariesLayer = centralBody.imageryLayerCollection.addImageryProvider(new Cesium.TileCoordinatesImageryProvider({
                     tilingScheme : centralBody.terrainProvider.getTilingScheme()
                 }));
             } else if (!b && Cesium.defined(tileBoundariesLayer)) {
-                centralBody.getImageryLayers().remove(tileBoundariesLayer);
+                centralBody.imageryLayerCollection.remove(tileBoundariesLayer);
                 tileBoundariesLayer = undefined;
             }
 
@@ -158,8 +131,8 @@ require([
     function selectTile(event) {
         selectedTile = undefined;
 
-        var ellipsoid = centralBody.getEllipsoid();
-        var cartesian = scene.getCamera().controller.pickEllipsoid({x: event.clientX, y: event.clientY}, ellipsoid);
+        var ellipsoid = centralBody.ellipsoid;
+        var cartesian = scene.camera.controller.pickEllipsoid({x: event.clientX, y: event.clientY}, ellipsoid);
 
         if (Cesium.defined(cartesian)) {
             var cartographic = ellipsoid.cartesianToCartographic(cartesian);
