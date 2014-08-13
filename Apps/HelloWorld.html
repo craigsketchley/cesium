@@ -24,17 +24,22 @@
           font-family: sans-serif;
       }
 
+      html {
+        height: 100%;
+      }
+
       body {
           padding: 0;
           margin: 0;
           overflow: hidden;
+          height: 100%;
       }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
   <script>
-    var widget = new Cesium.CesiumWidget('cesiumContainer');
+    var viewer = new Cesium.Viewer('cesiumContainer');
   </script>
 </body>
 </html>

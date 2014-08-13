@@ -8,25 +8,25 @@ define([
         '../Core/defineProperties',
         '../Core/destroyObject',
         '../Core/DeveloperError',
-        '../Core/isArray',
+        '../Core/FeatureDetection',
         '../Core/Geometry',
         '../Core/GeometryAttribute',
         '../Core/GeometryAttributes',
         '../Core/GeometryInstance',
         '../Core/GeometryInstanceAttribute',
+        '../Core/isArray',
         '../Core/Matrix4',
         '../Core/subdivideArray',
         '../Core/TaskProcessor',
         '../Renderer/BufferUsage',
         '../Renderer/createShaderSource',
-        '../Renderer/CullFace',
         '../Renderer/DrawCommand',
-        '../Renderer/Pass',
-        '../Renderer/VertexLayout',
+        '../ThirdParty/when',
+        './CullFace',
+        './Pass',
         './PrimitivePipeline',
         './PrimitiveState',
-        './SceneMode',
-        '../ThirdParty/when'
+        './SceneMode'
     ], function(
         BoundingSphere,
         clone,
@@ -36,25 +36,25 @@ define([
         defineProperties,
         destroyObject,
         DeveloperError,
-        isArray,
+        FeatureDetection,
         Geometry,
         GeometryAttribute,
         GeometryAttributes,
         GeometryInstance,
         GeometryInstanceAttribute,
+        isArray,
         Matrix4,
         subdivideArray,
         TaskProcessor,
         BufferUsage,
         createShaderSource,
-        CullFace,
         DrawCommand,
+        when,
+        CullFace,
         Pass,
-        VertexLayout,
         PrimitivePipeline,
         PrimitiveState,
-        SceneMode,
-        when) {
+        SceneMode) {
     "use strict";
 
     /**
@@ -81,15 +81,19 @@ define([
      * @alias Primitive
      * @constructor
      *
+     * @param {Object} [options] Object with the following properties:
      * @param {Array|GeometryInstance} [options.geometryInstances] The geometry instances - or a single geometry instance - to render.
      * @param {Appearance} [options.appearance] The appearance used to render the primitive.
      * @param {Boolean} [options.show=true] Determines if this primitive will be shown.
      * @param {Boolean} [options.vertexCacheOptimize=false] When <code>true</code>, geometry vertices are optimized for the pre and post-vertex-shader caches.
+     * @param {Boolean} [options.interleave=false] When <code>true</code>, geometry vertex attributes are interleaved, which can slightly improve rendering performance but increases load time.
      * @param {Boolean} [options.releaseGeometryInstances=true] When <code>true</code>, the primitive does not keep a reference to the input <code>geometryInstances</code> to save memory.
-     * @param {Boolean} [options.allow3DOnly=false] When <code>true</code>, each geometry instance will only be rendered in 3D to save GPU memory.
      * @param {Boolean} [options.allowPicking=true] When <code>true</code>, each geometry instance will only be pickable with {@link Scene#pick}.  When <code>false</code>, GPU memory is saved.
      * @param {Boolean} [options.asynchronous=true] Determines if the primitive will be created asynchronously or block until ready.
      * @param {Boolean} [options.debugShowBoundingVolume=false] For debugging only. Determines if this primitive's commands' bounding spheres are shown.
+     *
+     * @see GeometryInstance
+     * @see Appearance
      *
      * @example
      * // 1. Draw a translucent ellipse on the surface with a checkerboard pattern
@@ -97,7 +101,7 @@ define([
      *   geometry : new Cesium.EllipseGeometry({
      *       vertexFormat : Cesium.VertexFormat.POSITION_AND_ST,
      *       ellipsoid : ellipsoid,
-     *       center : ellipsoid.cartographicToCartesian(Cesium.Cartographic.fromDegrees(-100, 20)),
+     *       center : Cesium.Cartesian3.fromDegrees(-100.0, 20.0),
      *       semiMinorAxis : 500000.0,
      *       semiMajorAxis : 1000000.0,
      *       rotation : Cesium.Math.PI_OVER_FOUR
@@ -132,8 +136,8 @@ define([
      *     vertexFormat : Cesium.VertexFormat.POSITION_AND_NORMAL,
      *     radii : new Cesium.Cartesian3(500000.0, 500000.0, 1000000.0)
      *   }),
-     *   modelMatrix : Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(
-     *     ellipsoid.cartographicToCartesian(Cesium.Cartographic.fromDegrees(-95.59777, 40.03883))), new Cesium.Cartesian3(0.0, 0.0, 500000.0)),
+     *   modelMatrix : Cesium.Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(
+     *     Cesium.Cartesian3.fromDegrees(-95.59777, 40.03883)), new Cesium.Cartesian3(0.0, 0.0, 500000.0), new Cesium.Matrix4()),
      *   id : 'ellipsoid',
      *   attribute : {
      *     color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.AQUA)
@@ -153,7 +157,7 @@ define([
      *         radii : new Cesium.Cartesian3(500000.0, 500000.0, 1000000.0)
      *       })),
      *       modelMatrix : Cesium.Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(
-     *         ellipsoid.cartographicToCartesian(Cesium.Cartographic.fromDegrees(-95.59777, 40.03883))), new Cesium.Cartesian3(0.0, 0.0, 500000.0)),
+     *         Cesium.Cartesian3.fromDegrees(-95.59777, 40.03883)), new Cesium.Cartesian3(0.0, 0.0, 500000.0), new Cesium.Matrix4()),
      *       id : 'ellipsoid',
      *       attribute : {
      *         color : Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.AQUA)
@@ -162,9 +166,6 @@ define([
      *   appearance : new Cesium.PerInstanceColorAppearance()
      * });
      * scene.primitives.add(primitive);
-     *
-     * @see GeometryInstance
-     * @see Appearance
      */
     var Primitive = function(options) {
         options = defaultValue(options, defaultValue.EMPTY_OBJECT);
@@ -201,19 +202,19 @@ define([
          * The 4x4 transformation matrix that transforms the primitive (all geometry instances) from model to world coordinates.
          * When this is the identity matrix, the primitive is drawn in world coordinates, i.e., Earth's WGS84 coordinates.
          * Local reference frames can be used by providing a different transformation matrix, like that returned
-         * by {@link Transforms.eastNorthUpToFixedFrame}.  This matrix is available to GLSL vertex and fragment
-         * shaders via {@link czm_model} and derived uniforms.
+         * by {@link Transforms.eastNorthUpToFixedFrame}.
+         *
+         * <p>
+         * If the model matrix is changed after creation, it only affects primitives with one instance and only in 3D mode.
+         * </p>
          *
          * @type Matrix4
          *
          * @default Matrix4.IDENTITY
          *
          * @example
-         * var origin = ellipsoid.cartographicToCartesian(
-         *   Cesium.Cartographic.fromDegrees(-95.0, 40.0, 200000.0));
+         * var origin = Cesium.Cartesian3.fromDegrees(-95.0, 40.0, 200000.0);
          * p.modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
-         *
-         * @see czm_model
          */
         this.modelMatrix = Matrix4.clone(Matrix4.IDENTITY);
         this._modelMatrix = new Matrix4();
@@ -228,56 +229,16 @@ define([
          */
         this.show = defaultValue(options.show, true);
 
-        /**
-         * When <code>true</code>, geometry vertices are optimized for the pre and post-vertex-shader caches.
-         *
-         * @type {Boolean}
-         *
-         * @default true
-         *
-         * @readonly
-         */
-        this.vertexCacheOptimize = defaultValue(options.vertexCacheOptimize, false);
-
-        /**
-         * When <code>true</code>, the primitive does not keep a reference to the input <code>geometryInstances</code> to save memory.
-         *
-         * @type {Boolean}
-         *
-         * @default true
-         *
-         * @readonly
-         */
-        this.releaseGeometryInstances = defaultValue(options.releaseGeometryInstances, true);
-
-        /**
-         * When <code>true</code>, each geometry instance will only be rendered in 3D to save GPU memory.
-         *
-         * @type {Boolean}
-         *
-         * @default false
-         *
-         * @readonly
-         */
-        this.allow3DOnly = defaultValue(options.allow3DOnly, false);
-
-        /**
-         * When <code>true</code>, each geometry instance will only be pickable with {@link Scene#pick}.  When <code>false</code>, GPU memory is saved.         *
-         *
-         * @type {Boolean}
-         *
-         * @default true
-         *
-         * @readonly
-         */
-        this.allowPicking = defaultValue(options.allowPicking, true);
-
+        this._vertexCacheOptimize = defaultValue(options.vertexCacheOptimize, false);
+        this._interleave = defaultValue(options.interleave, false);
+        this._releaseGeometryInstances = defaultValue(options.releaseGeometryInstances, true);
+        this._allowPicking = defaultValue(options.allowPicking, true);
         this._asynchronous = defaultValue(options.asynchronous, true);
 
         /**
          * This property is for debugging only; it is not for production use nor is it optimized.
          * <p>
-         * Draws the bounding sphere for each {@link DrawCommand} in the primitive.
+         * Draws the bounding sphere for each draw command in the primitive.
          * </p>
          *
          * @type {Boolean}
@@ -292,6 +253,7 @@ define([
         this._geometries = [];
         this._vaAttributes = undefined;
         this._error = undefined;
+        this._numberOfInstances = 0;
 
         this._boundingSphere = undefined;
         this._boundingSphereWC = undefined;
@@ -322,6 +284,70 @@ define([
 
     defineProperties(Primitive.prototype, {
         /**
+         * When <code>true</code>, geometry vertices are optimized for the pre and post-vertex-shader caches.
+         *
+         * @memberof Primitive.prototype
+         *
+         * @type {Boolean}
+         * @readonly
+         *
+         * @default true
+         */
+        vertexCacheOptimize : {
+            get : function() {
+                return this._vertexCacheOptimize;
+            }
+        },
+
+        /**
+         * Determines if geometry vertex attributes are interleaved, which can slightly improve rendering performance.
+         *
+         * @memberof Primitive.prototype
+         *
+         * @type {Boolean}
+         * @readonly
+         *
+         * @default false
+         */
+        interleave : {
+            get : function() {
+                return this._interleave;
+            }
+        },
+
+        /**
+         * When <code>true</code>, the primitive does not keep a reference to the input <code>geometryInstances</code> to save memory.
+         *
+         * @memberof Primitive.prototype
+         *
+         * @type {Boolean}
+         * @readonly
+         *
+         * @default true
+         */
+        releaseGeometryInstances : {
+            get : function() {
+                return this._releaseGeometryInstances;
+            }
+        },
+
+        /**
+         * When <code>true</code>, each geometry instance will only be pickable with {@link Scene#pick}.  When <code>false</code>, GPU memory is saved.         *
+         *
+         * @memberof Primitive.prototype
+         *
+         * @type {Boolean}
+         * @readonly
+         *
+         * @default true
+         */
+        allowPicking : {
+            get : function() {
+                return this._allowPicking;
+            }
+        },
+
+        /**
          * Determines if the geometry instances will be created and batched on a web worker.
          *
          * @memberof Primitive.prototype
@@ -334,6 +360,22 @@ define([
         asynchronous : {
             get : function() {
                 return this._asynchronous;
+            }
+        },
+
+        /**
+         * Determines if the primitive is complete and ready to render.  If this property is
+         * true, the primitive will be rendered the next time that {@link Primitive#update}
+         * is called.
+         *
+         * @memberof Primitive.prototype
+         *
+         * @type {Boolean}
+         * @readonly
+         */
+        ready : {
+            get : function() {
+                return this._state === PrimitiveState.COMPLETE;
             }
         }
     });
@@ -397,7 +439,7 @@ define([
 
     var positionRegex = /attribute\s+vec(?:3|4)\s+(.*)3DHigh;/g;
 
-    function createColumbusViewShader(primitive, vertexShaderSource) {
+    function createColumbusViewShader(primitive, vertexShaderSource, scene3DOnly) {
         var match;
 
         var forwardDecl = '';
@@ -414,7 +456,7 @@ define([
                 forwardDecl += functionName + ';\n';
             }
 
-            if (!primitive.allow3DOnly) {
+            if (!scene3DOnly) {
                 attributes +=
                     'attribute vec3 ' + name + '2DHigh;\n' +
                     'attribute vec3 ' + name + '2DLow;\n';
@@ -528,24 +570,30 @@ define([
         return pickColors;
     }
 
-    var numberOfCreationWorkers = 3;
+    var numberOfCreationWorkers = Math.max(FeatureDetection.hardwareConcurrency - 1, 1);
     var createGeometryTaskProcessors;
     var combineGeometryTaskProcessor = new TaskProcessor('combineGeometry', Number.POSITIVE_INFINITY);
 
     /**
-     * @private
+     * Called when {@link Viewer} or {@link CesiumWidget} render the scene to
+     * get the draw commands needed to render this primitive.
+     * <p>
+     * Do not call this function directly.  This is documented just to
+     * list the exceptions that may be propagated when the scene is rendered:
+     * </p>
+     *
+     * @exception {DeveloperError} All instance geometries must have the same primitiveType..
      */
     Primitive.prototype.update = function(context, frameState, commandList) {
-        if (!this.show ||
-            ((!defined(this.geometryInstances)) && (this._va.length === 0)) ||
+        if (((!defined(this.geometryInstances)) && (this._va.length === 0)) ||
             (defined(this.geometryInstances) && isArray(this.geometryInstances) && this.geometryInstances.length === 0) ||
             (!defined(this.appearance)) ||
-            (frameState.mode !== SceneMode.SCENE3D && this.allow3DOnly) ||
+            (frameState.mode !== SceneMode.SCENE3D && frameState.scene3DOnly) ||
             (!frameState.passes.render && !frameState.passes.pick)) {
             return;
         }
 
-        var projection = frameState.scene2D.projection;
+        var projection = frameState.mapProjection;
         var colorCommand;
         var pickCommand;
         var geometry;
@@ -561,6 +609,7 @@ define([
         var geometries;
         var allowPicking = this.allowPicking;
         var instanceIds = this._instanceIds;
+        var scene3DOnly = frameState.scene3DOnly;
         var that = this;
 
         if (this._state !== PrimitiveState.COMPLETE && this._state !== PrimitiveState.COMBINED) {
@@ -569,7 +618,7 @@ define([
                     throw this._error;
                 } else if (this._state === PrimitiveState.READY) {
                     instances = (isArray(this.geometryInstances)) ? this.geometryInstances : [this.geometryInstances];
-                    length = instances.length;
+                    this._numberOfInstances = length = instances.length;
 
                     var promises = [];
                     var subTasks = [];
@@ -616,7 +665,7 @@ define([
                         ellipsoid : projection.ellipsoid,
                         projection : projection,
                         elementIndexUintSupported : context.elementIndexUint,
-                        allow3DOnly : this.allow3DOnly,
+                        scene3DOnly : scene3DOnly,
                         allowPicking : allowPicking,
                         vertexCacheOptimize : this.vertexCacheOptimize,
                         modelMatrix : this.modelMatrix
@@ -640,7 +689,7 @@ define([
                 }
             } else {
                 instances = (isArray(this.geometryInstances)) ? this.geometryInstances : [this.geometryInstances];
-                length = instances.length;
+                this._numberOfInstances = length = instances.length;
                 geometries = new Array(length);
                 clonedInstances = new Array(instances.length);
 
@@ -665,7 +714,7 @@ define([
                     ellipsoid : projection.ellipsoid,
                     projection : projection,
                     elementIndexUintSupported : context.elementIndexUint,
-                    allow3DOnly : this.allow3DOnly,
+                    scene3DOnly : scene3DOnly,
                     allowPicking : allowPicking,
                     vertexCacheOptimize : this.vertexCacheOptimize,
                     modelMatrix : this.modelMatrix
@@ -705,7 +754,7 @@ define([
                     geometry : geometry,
                     attributeLocations : attributeLocations,
                     bufferUsage : BufferUsage.STATIC_DRAW,
-                    vertexLayout : VertexLayout.INTERLEAVED,
+                    interleave : this._interleave,
                     vertexArrayAttributes : attributes
                 }));
             }
@@ -721,7 +770,7 @@ define([
             this._state = PrimitiveState.COMPLETE;
         }
 
-        if (this._state !== PrimitiveState.COMPLETE) {
+        if (!this.show || this._state !== PrimitiveState.COMPLETE) {
             return;
         }
 
@@ -803,19 +852,18 @@ define([
         }
 
         if (createSP) {
-            var shaderCache = context.shaderCache;
-            var vs = createColumbusViewShader(this, appearance.vertexShaderSource);
+            var vs = createColumbusViewShader(this, appearance.vertexShaderSource, scene3DOnly);
             vs = appendShow(this, vs);
             var fs = appearance.getFragmentShaderSource();
 
-            this._sp = shaderCache.replaceShaderProgram(this._sp, vs, fs, attributeLocations);
+            this._sp = context.replaceShaderProgram(this._sp, vs, fs, attributeLocations);
             validateShaderMatching(this._sp, attributeLocations);
 
             if (allowPicking) {
                 var pickFS = createShaderSource({ sources : [fs], pickColorQualifier : 'varying' });
-                this._pickSP = shaderCache.replaceShaderProgram(this._pickSP, createPickVertexShaderSource(vs), pickFS, attributeLocations);
+                this._pickSP = context.replaceShaderProgram(this._pickSP, createPickVertexShaderSource(vs), pickFS, attributeLocations);
             } else {
-                this._pickSP = shaderCache.getShaderProgram(vs, fs, attributeLocations);
+                this._pickSP = context.createShaderProgram(vs, fs, attributeLocations);
             }
 
             validateShaderMatching(this._pickSP, attributeLocations);
@@ -838,10 +886,11 @@ define([
                 if (twoPasses) {
                     colorCommand = colorCommands[i];
                     if (!defined(colorCommand)) {
-                        colorCommand = colorCommands[i] = new DrawCommand();
+                        colorCommand = colorCommands[i] = new DrawCommand({
+                            owner : this,
+                            primitiveType : this._primitiveType
+                        });
                     }
-                    colorCommand.owner = this;
-                    colorCommand.primitiveType = this._primitiveType;
                     colorCommand.vertexArray = this._va[vaIndex];
                     colorCommand.renderState = this._backFaceRS;
                     colorCommand.shaderProgram = this._sp;
@@ -853,10 +902,11 @@ define([
 
                 colorCommand = colorCommands[i];
                 if (!defined(colorCommand)) {
-                    colorCommand = colorCommands[i] = new DrawCommand();
+                    colorCommand = colorCommands[i] = new DrawCommand({
+                        owner : this,
+                        primitiveType : this._primitiveType
+                    });
                 }
-                colorCommand.owner = this;
-                colorCommand.primitiveType = this._primitiveType;
                 colorCommand.vertexArray = this._va[vaIndex];
                 colorCommand.renderState = this._frontFaceRS;
                 colorCommand.shaderProgram = this._sp;
@@ -865,10 +915,11 @@ define([
 
                 pickCommand = pickCommands[m];
                 if (!defined(pickCommand)) {
-                    pickCommand = pickCommands[m] = new DrawCommand();
+                    pickCommand = pickCommands[m] = new DrawCommand({
+                        owner : this,
+                        primitiveType : this._primitiveType
+                    });
                 }
-                pickCommand.owner = this;
-                pickCommand.primitiveType = this._primitiveType;
                 pickCommand.vertexArray = this._va[vaIndex];
                 pickCommand.renderState = this._pickRS;
                 pickCommand.shaderProgram = this._pickSP;
@@ -903,7 +954,7 @@ define([
                         typedArray.set(value, k * componentsPerAttribute);
                     }
 
-                    var offsetInBytes = offset * componentsPerAttribute * componentDatatype.sizeInBytes;
+                    var offsetInBytes = offset * componentsPerAttribute * ComponentDatatype.getSizeInBytes(componentDatatype);
                     vaAttribute.vertexBuffer.copyFromArrayView(typedArray, offsetInBytes);
                 }
                 attribute.dirty = false;
@@ -912,10 +963,17 @@ define([
             attributes.length = 0;
         }
 
-        if (!Matrix4.equals(this.modelMatrix, this._modelMatrix)) {
-            Matrix4.clone(this.modelMatrix, this._modelMatrix);
-            this._boundingSphereWC = BoundingSphere.transform(this._boundingSphere, this.modelMatrix, this._boundingSphereWC);
-            if (!this.allow3DOnly && defined(this._boundingSphere)) {
+        var modelMatrix;
+        if (this._numberOfInstances > 1 || frameState.mode !== SceneMode.SCENE3D) {
+            modelMatrix = Matrix4.IDENTITY;
+        } else {
+            modelMatrix = this.modelMatrix;
+        }
+
+        if (!Matrix4.equals(modelMatrix, this._modelMatrix)) {
+            Matrix4.clone(modelMatrix, this._modelMatrix);
+            this._boundingSphereWC = BoundingSphere.transform(this._boundingSphere, modelMatrix, this._boundingSphereWC);
+            if (!scene3DOnly && defined(this._boundingSphere)) {
                 this._boundingSphereCV = BoundingSphere.projectTo2D(this._boundingSphereWC, projection, this._boundingSphereCV);
                 this._boundingSphere2D = BoundingSphere.clone(this._boundingSphereCV, this._boundingSphere2D);
                 this._boundingSphere2D.center.x = 0.0;
@@ -937,7 +995,7 @@ define([
         if (passes.render) {
             length = colorCommands.length;
             for (i = 0; i < length; ++i) {
-                colorCommands[i].modelMatrix = this.modelMatrix;
+                colorCommands[i].modelMatrix = modelMatrix;
                 colorCommands[i].boundingVolume = boundingSphere;
                 colorCommands[i].debugShowBoundingVolume = this.debugShowBoundingVolume;
 
@@ -948,7 +1006,7 @@ define([
         if (passes.pick) {
             length = pickCommands.length;
             for (i = 0; i < length; ++i) {
-                pickCommands[i].modelMatrix = this.modelMatrix;
+                pickCommands[i].modelMatrix = modelMatrix;
                 pickCommands[i].boundingVolume = boundingSphere;
 
                 commandList.push(pickCommands[i]);
@@ -983,7 +1041,6 @@ define([
      * Returns the modifiable per-instance attributes for a {@link GeometryInstance}.
      *
      * @param {Object} id The id of the {@link GeometryInstance}.
-     *
      * @returns {Object} The typed array in the attribute's format or undefined if the is no instance with id.
      *
      * @exception {DeveloperError} must call update before calling getGeometryInstanceAttributes.
@@ -1050,8 +1107,6 @@ define([
      * <code>isDestroyed</code> will result in a {@link DeveloperError} exception.
      * </p>
      *
-     * @memberof Primitive
-     *
      * @returns {Boolean} <code>true</code> if this object was destroyed; otherwise, <code>false</code>.
      *
      * @see Primitive#destroy
@@ -1069,8 +1124,6 @@ define([
      * assign the return value (<code>undefined</code>) to the object as done in the example.
      * </p>
      *
-     * @memberof Primitive
-     *
      * @returns {undefined}
      *
      * @exception {DeveloperError} This object was destroyed, i.e., destroy() was called.
@@ -1084,8 +1137,8 @@ define([
         var length;
         var i;
 
-        this._sp = this._sp && this._sp.release();
-        this._pickSP = this._pickSP && this._pickSP.release();
+        this._sp = this._sp && this._sp.destroy();
+        this._pickSP = this._pickSP && this._pickSP.destroy();
 
         var va = this._va;
         length = va.length;

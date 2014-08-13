@@ -1,18 +1,18 @@
 /*global defineSuite*/
 defineSuite([
-         'Scene/SceneTransforms',
-         'Core/Cartographic',
-         'Core/Ellipsoid',
-         'Core/Math',
-         'Specs/createScene',
-         'Specs/destroyScene'
-     ], function(
-         SceneTransforms,
-         Cartographic,
-         Ellipsoid,
-         CesiumMath,
-         createScene,
-         destroyScene) {
+        'Scene/SceneTransforms',
+        'Core/Cartographic',
+        'Core/Ellipsoid',
+        'Core/Math',
+        'Specs/createScene',
+        'Specs/destroyScene'
+    ], function(
+        SceneTransforms,
+        Cartographic,
+        Ellipsoid,
+        CesiumMath,
+        createScene,
+        destroyScene) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
@@ -50,8 +50,8 @@ defineSuite([
         scene.initializeFrame();
 
         var windowCoordinates = SceneTransforms.wgs84ToWindowCoordinates(scene, position);
-        expect(windowCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
-        expect(windowCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
+        expect(windowCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
+        expect(windowCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
     });
 
     it('returns correct drawing buffer position', function() {
@@ -65,8 +65,8 @@ defineSuite([
         scene.render();
 
         var drawingBufferCoordinates = SceneTransforms.wgs84ToDrawingBufferCoordinates(scene, position);
-        expect(drawingBufferCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
-        expect(drawingBufferCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
+        expect(drawingBufferCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
+        expect(drawingBufferCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
     });
 
 }, 'WebGL');

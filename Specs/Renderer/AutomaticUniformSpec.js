@@ -1,34 +1,36 @@
 /*global defineSuite*/
 defineSuite([
-         'Specs/createCamera',
-         'Specs/createContext',
-         'Specs/destroyContext',
-         'Specs/createFrameState',
-         'Core/Cartesian2',
-         'Core/Cartesian3',
-         'Core/Matrix4',
-         'Core/PrimitiveType',
-         'Core/defaultValue',
-         'Renderer/BufferUsage',
-         'Renderer/ClearCommand',
-         'Scene/FrameState',
-         'Scene/OrthographicFrustum',
-         'Scene/SceneMode'
-     ], 'Renderer/AutomaticUniforms', function(
-         createCamera,
-         createContext,
-         destroyContext,
-         createFrameState,
-         Cartesian2,
-         Cartesian3,
-         Matrix4,
-         PrimitiveType,
-         defaultValue,
-         BufferUsage,
-         ClearCommand,
-         FrameState,
-         OrthographicFrustum,
-         SceneMode) {
+        'Core/Cartesian2',
+        'Core/Cartesian3',
+        'Core/defaultValue',
+        'Core/Matrix4',
+        'Core/PrimitiveType',
+        'Renderer/BufferUsage',
+        'Renderer/ClearCommand',
+        'Renderer/DrawCommand',
+        'Scene/FrameState',
+        'Scene/OrthographicFrustum',
+        'Scene/SceneMode',
+        'Specs/createCamera',
+        'Specs/createContext',
+        'Specs/createFrameState',
+        'Specs/destroyContext'
+    ], 'Renderer/AutomaticUniforms', function(
+        Cartesian2,
+        Cartesian3,
+        defaultValue,
+        Matrix4,
+        PrimitiveType,
+        BufferUsage,
+        ClearCommand,
+        DrawCommand,
+        FrameState,
+        OrthographicFrustum,
+        SceneMode,
+        createCamera,
+        createContext,
+        createFrameState,
+        destroyContext) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
@@ -45,7 +47,7 @@ defineSuite([
     function createMockCamera(view, projection, infiniteProjection, position, direction, right, up) {
         return {
             viewMatrix : defaultValue(view, Matrix4.clone(Matrix4.IDENTITY)),
-            inverseViewMatrix : Matrix4.inverseTransformation(defaultValue(view, Matrix4.clone(Matrix4.IDENTITY))),
+            inverseViewMatrix : Matrix4.inverseTransformation(defaultValue(view, Matrix4.clone(Matrix4.IDENTITY)), new Matrix4()),
             frustum : {
                 near : 1.0,
                 far : 1000.0,
@@ -79,12 +81,13 @@ defineSuite([
         ClearCommand.ALL.execute(context);
         expect(context.readPixels()).toEqual([0, 0, 0, 0]);
 
-        context.draw({
+        var command = new DrawCommand({
             primitiveType : PrimitiveType.POINTS,
             shaderProgram : sp,
             vertexArray : va,
             modelMatrix : modelMatrix
         });
+        command.execute(context);
         expect(context.readPixels()).toEqual([255, 255, 255, 255]);
 
         sp = sp.destroy();
@@ -863,7 +866,7 @@ defineSuite([
     it('has czm_sceneMode', function() {
         var fs =
             'void main() { ' +
-            '  gl_FragColor = vec4(czm_sceneMode == 2.0); ' +   // 3D
+            '  gl_FragColor = vec4(czm_sceneMode == 3.0); ' +   // 3D
             '}';
         verifyDraw(fs);
     });
@@ -871,7 +874,7 @@ defineSuite([
     it('has czm_sceneMode2D', function() {
         var fs =
             'void main() { ' +
-            '  gl_FragColor = vec4(czm_sceneMode2D == 0.0); ' +
+            '  gl_FragColor = vec4(czm_sceneMode2D == 2.0); ' +
             '}';
         verifyDraw(fs);
     });
@@ -887,7 +890,7 @@ defineSuite([
     it('has czm_sceneMode3D', function() {
         var fs =
             'void main() { ' +
-            '  gl_FragColor = vec4(czm_sceneMode3D == 2.0); ' +
+            '  gl_FragColor = vec4(czm_sceneMode3D == 3.0); ' +
             '}';
         verifyDraw(fs);
     });
@@ -895,7 +898,7 @@ defineSuite([
     it('has czm_sceneModeMorphing', function() {
         var fs =
             'void main() { ' +
-            '  gl_FragColor = vec4(czm_sceneModeMorphing == 3.0); ' +
+            '  gl_FragColor = vec4(czm_sceneModeMorphing == 0.0); ' +
             '}';
         verifyDraw(fs);
     });
@@ -910,7 +913,7 @@ defineSuite([
 
     it('has czm_eyeHeight2D in Scene2D', function() {
         var us = context.uniformState;
-        var camera = createCamera(context);
+        var camera = createCamera();
         var frustum = new OrthographicFrustum();
         frustum.near = 1.0;
         frustum.far = 2.0;

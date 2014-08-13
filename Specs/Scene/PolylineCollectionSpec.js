@@ -1,51 +1,51 @@
 /*global defineSuite*/
 defineSuite([
-         'Scene/PolylineCollection',
-         'Specs/createContext',
-         'Specs/destroyContext',
-         'Specs/createCamera',
-         'Specs/createFrameState',
-         'Specs/createScene',
-         'Specs/destroyScene',
-         'Specs/frameState',
-         'Specs/pick',
-         'Specs/render',
-         'Core/BoundingSphere',
-         'Core/Cartesian3',
-         'Core/Cartographic',
-         'Core/Color',
-         'Core/Math',
-         'Renderer/ClearCommand',
-         'Scene/SceneMode',
-         'Scene/Material'
-     ], function(
-         PolylineCollection,
-         createContext,
-         destroyContext,
-         createCamera,
-         createFrameState,
-         createScene,
-         destroyScene,
-         frameState,
-         pick,
-         render,
-         BoundingSphere,
-         Cartesian3,
-         Cartographic,
-         Color,
-         CesiumMath,
-         ClearCommand,
-         SceneMode,
-         Material) {
+        'Scene/PolylineCollection',
+        'Core/BoundingSphere',
+        'Core/Cartesian3',
+        'Core/Cartographic',
+        'Core/Color',
+        'Core/Math',
+        'Renderer/ClearCommand',
+        'Scene/Material',
+        'Scene/SceneMode',
+        'Specs/createCamera',
+        'Specs/createContext',
+        'Specs/createFrameState',
+        'Specs/createScene',
+        'Specs/destroyContext',
+        'Specs/destroyScene',
+        'Specs/pick',
+        'Specs/render'
+    ], function(
+        PolylineCollection,
+        BoundingSphere,
+        Cartesian3,
+        Cartographic,
+        Color,
+        CesiumMath,
+        ClearCommand,
+        Material,
+        SceneMode,
+        createCamera,
+        createContext,
+        createFrameState,
+        createScene,
+        destroyContext,
+        destroyScene,
+        pick,
+        render) {
     "use strict";
     /*global it,expect,beforeEach,afterEach,beforeAll,afterAll*/
 
     var context;
+    var frameState;
     var polylines;
     var us;
 
     beforeAll(function() {
         context = createContext();
+        frameState = createFrameState();
     });
 
     afterAll(function() {
@@ -56,7 +56,7 @@ defineSuite([
         polylines = new PolylineCollection();
 
         us = context.uniformState;
-        us.update(context, createFrameState(createCamera(context)));
+        us.update(context, createFrameState(createCamera()));
     });
 
     afterEach(function() {
@@ -840,18 +840,18 @@ defineSuite([
         var material = Material.fromType('Color');
         material.uniforms.color = new Color(1.0, 1.0, 1.0, 0.0);
         p.add({
-            positions : [Cartesian3.UNIT_Z, Cartesian3.negate(Cartesian3.UNIT_Z)],
+            positions : [Cartesian3.UNIT_Z, Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3())],
             material : material
         });
 
         var camera = scene.camera;
         camera.position = new Cartesian3(1.02, 0.0, 0.0);
-        camera.direction = Cartesian3.negate(Cartesian3.UNIT_X);
+        camera.direction = Cartesian3.negate(Cartesian3.UNIT_X, new Cartesian3());
         camera.up = Cartesian3.clone(Cartesian3.UNIT_Z);
 
         scene.initializeFrame();
         scene.render();
-        expect(scene._context.readPixels()).toNotEqual([0, 0, 0, 0]);
+        expect(scene.context.readPixels()).toNotEqual([0, 0, 0, 0]);
 
         destroyScene(scene);
     });
@@ -1555,7 +1555,7 @@ defineSuite([
     });
 
     function test2DBoundingSphere(testMode) {
-        var projection = frameState.scene2D.projection;
+        var projection = frameState.mapProjection;
         var ellipsoid = projection.ellipsoid;
 
         var one = polylines.add({

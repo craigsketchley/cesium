@@ -1,50 +1,52 @@
 /*global define*/
 define([
-        '../../Core/defineProperties',
         '../../Core/defined',
+        '../../Core/defineProperties',
         '../../Core/DeveloperError',
-        '../createCommand',
-        '../../ThirdParty/knockout'
+        '../../ThirdParty/knockout',
+        '../createCommand'
     ], function(
-        defineProperties,
         defined,
+        defineProperties,
         DeveloperError,
-        createCommand,
-        knockout) {
+        knockout,
+        createCommand) {
     "use strict";
 
     /**
-     * A view model that represents each item in the BaseLayerPicker.
+     * A view model that represents each item in the {@link BaseLayerPicker}.
      *
      * @alias ProviderViewModel
      * @constructor
      *
-     * @param {Object} description The object containing all parameters.
-     * @param {String} description.name The name of the layer.
-     * @param {String} description.tooltip The tooltip to show when the item is moused over.
-     * @param {String} description.iconUrl An icon representing the layer.
-     * @param {Function|Command} description.creationFunction A function or Command which creates the ImageryProvider or array of ImageryProviders to be added to the layers collection.
+     * @param {Object} options The object containing all parameters.
+     * @param {String} options.name The name of the layer.
+     * @param {String} options.tooltip The tooltip to show when the item is moused over.
+     * @param {String} options.iconUrl An icon representing the layer.
+     * @param {ProviderViewModel~CreationFunction|Command} options.creationFunction A function or Command
+     *        that creates one or more providers which will be added to the globe when this item is selected.
      *
      * @see BaseLayerPicker
      * @see ImageryProvider
+     * @see TerrainProvider
      */
-    var ProviderViewModel = function(description) {
+    var ProviderViewModel = function(options) {
         //>>includeStart('debug', pragmas.debug);
-        if (!defined(description.name)) {
-            throw new DeveloperError('description.name is required.');
+        if (!defined(options.name)) {
+            throw new DeveloperError('options.name is required.');
         }
-        if (!defined(description.tooltip)) {
-            throw new DeveloperError('description.tooltip is required.');
+        if (!defined(options.tooltip)) {
+            throw new DeveloperError('options.tooltip is required.');
         }
-        if (!defined(description.iconUrl)) {
-            throw new DeveloperError('description.iconUrl is required.');
+        if (!defined(options.iconUrl)) {
+            throw new DeveloperError('options.iconUrl is required.');
         }
-        if (typeof description.creationFunction !== 'function') {
-            throw new DeveloperError('description.creationFunction is required.');
+        if (typeof options.creationFunction !== 'function') {
+            throw new DeveloperError('options.creationFunction is required.');
         }
         //>>includeEnd('debug');
 
-        var creationCommand = description.creationFunction;
+        var creationCommand = options.creationFunction;
         if (!defined(creationCommand.canExecute)) {
             creationCommand = createCommand(creationCommand);
         }
@@ -55,27 +57,27 @@ define([
          * Gets the display name.  This property is observable.
          * @type {String}
          */
-        this.name = description.name;
+        this.name = options.name;
 
         /**
          * Gets the tooltip.  This property is observable.
          * @type {String}
          */
-        this.tooltip = description.tooltip;
+        this.tooltip = options.tooltip;
 
         /**
          * Gets the icon.  This property is observable.
          * @type {String}
          */
-        this.iconUrl = description.iconUrl;
+        this.iconUrl = options.iconUrl;
 
         knockout.track(this, ['name', 'tooltip', 'iconUrl']);
     };
 
     defineProperties(ProviderViewModel.prototype, {
         /**
-         * Gets the Command called to create the imagery provider or array of
-         * imagery providers to be added to the bottom of the layer collection.
+         * Gets the Command that creates one or more providers which will be added to
+         * the globe when this item is selected.
          * @memberof ProviderViewModel.prototype
          *
          * @type {Command}
@@ -86,6 +88,14 @@ define([
             }
         }
     });
+
+    /**
+     * A function which creates one or more providers.
+     * @callback ProviderViewModel~CreationFunction
+     * @returns {ImageryProvider|TerrainProvider|ImageryProvider[]|TerrainProvider[]}
+     *          The ImageryProvider or TerrainProvider, or array of providers, to be added
+     *          to the globe.
+     */
 
     return ProviderViewModel;
 });

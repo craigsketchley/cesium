@@ -9,11 +9,11 @@ define([
         '../Core/destroyObject',
         '../Core/Math',
         '../Core/Matrix4',
+        '../Core/PixelFormat',
         '../Core/Transforms',
         '../Renderer/ClearCommand',
         '../Renderer/PassState',
         '../Renderer/PixelDatatype',
-        '../Renderer/PixelFormat',
         '../Renderer/RenderbufferFormat',
         '../Shaders/PostProcessFilters/AdditiveBlend',
         '../Shaders/PostProcessFilters/BrightPass',
@@ -29,11 +29,11 @@ define([
         destroyObject,
         CesiumMath,
         Matrix4,
+        PixelFormat,
         Transforms,
         ClearCommand,
         PassState,
         PixelDatatype,
-        PixelFormat,
         RenderbufferFormat,
         AdditiveBlend,
         BrightPass,
@@ -111,16 +111,17 @@ define([
         var that = this;
 
         if (!defined(this._downSampleCommand)) {
-            this._clearFBO1Command = new ClearCommand();
-            this._clearFBO1Command.color = new Color();
-
-            this._clearFBO2Command = new ClearCommand();
-            this._clearFBO2Command.color = new Color();
+            this._clearFBO1Command = new ClearCommand({
+                color : new Color()
+            });
+            this._clearFBO2Command = new ClearCommand({
+                color : new Color()
+            });
 
             var rs;
             var uniformMap = {};
 
-            var downSampleCommand = this._downSampleCommand = context.createViewportQuadCommand(PassThrough, {
+            this._downSampleCommand = context.createViewportQuadCommand(PassThrough, {
                 renderState : rs,
                 uniformMap : uniformMap,
                 owner : this
@@ -139,7 +140,7 @@ define([
                 }
             };
 
-            var brightPassCommand = this._brightPassCommand = context.createViewportQuadCommand(BrightPass, {
+            this._brightPassCommand = context.createViewportQuadCommand(BrightPass, {
                 renderState : rs,
                 uniformMap : uniformMap,
                 owner : this
@@ -160,7 +161,7 @@ define([
                 }
             };
 
-            var blurXCommand = this._blurXCommand = context.createViewportQuadCommand(GaussianBlur1D, {
+            this._blurXCommand = context.createViewportQuadCommand(GaussianBlur1D, {
                 renderState : rs,
                 uniformMap : uniformMap,
                 owner : this
@@ -178,7 +179,7 @@ define([
                 }
             };
 
-            var blurYCommand = this._blurYCommand = context.createViewportQuadCommand(GaussianBlur1D, {
+            this._blurYCommand = context.createViewportQuadCommand(GaussianBlur1D, {
                 renderState : rs,
                 uniformMap : uniformMap,
                 owner : this
@@ -193,7 +194,7 @@ define([
                 }
             };
 
-            var additiveBlendCommand = this._blendCommand = context.createViewportQuadCommand(AdditiveBlend, {
+            this._blendCommand = context.createViewportQuadCommand(AdditiveBlend, {
                 renderState : rs,
                 uniformMap : uniformMap,
                 owner : this
@@ -201,7 +202,7 @@ define([
 
             uniformMap = {};
 
-            var fullScreenCommand = this._fullScreenCommand = context.createViewportQuadCommand(PassThrough, {
+            this._fullScreenCommand = context.createViewportQuadCommand(PassThrough, {
                 renderState : rs,
                 uniformMap : uniformMap,
                 owner : this
@@ -327,10 +328,10 @@ define([
         // create up sampled render state
         var viewportTransformation = Matrix4.computeViewportTransformation(viewport, 0.0, 1.0, postProcessMatrix4Scratch);
         var sunPositionEC = Matrix4.multiplyByPoint(viewMatrix, sunPosition, sunPositionECScratch);
-        var sunPositionWC = Transforms.pointToWindowCoordinates(viewProjectionMatrix, viewportTransformation, sunPosition, sunPositionWCScratch);
+        var sunPositionWC = Transforms.pointToGLWindowCoordinates(viewProjectionMatrix, viewportTransformation, sunPosition, sunPositionWCScratch);
 
         sunPositionEC.x += CesiumMath.SOLAR_RADIUS;
-        var limbWC = Transforms.pointToWindowCoordinates(projectionMatrix, viewportTransformation, sunPositionEC, sunPositionEC);
+        var limbWC = Transforms.pointToGLWindowCoordinates(projectionMatrix, viewportTransformation, sunPositionEC, sunPositionEC);
         var sunSize = Cartesian2.magnitude(Cartesian2.subtract(limbWC, sunPositionWC, limbWC)) * 30.0 * 2.0;
 
         var size = sizeScratch;
@@ -343,12 +344,12 @@ define([
         scissorRectangle.width = Math.min(size.x, width);
         scissorRectangle.height = Math.min(size.y, height);
 
-        Cartesian2.clone(sunPositionWC, this._uCenter);
+        this._uCenter = Cartesian2.clone(sunPositionWC, this._uCenter);
         this._uRadius = Math.max(size.x, size.y) * 0.5;
 
         // create down sampled render state
         viewportTransformation = Matrix4.computeViewportTransformation(downSampleViewport, 0.0, 1.0, postProcessMatrix4Scratch);
-        sunPositionWC = Transforms.pointToWindowCoordinates(viewProjectionMatrix, viewportTransformation, sunPosition, sunPositionWCScratch);
+        sunPositionWC = Transforms.pointToGLWindowCoordinates(viewProjectionMatrix, viewportTransformation, sunPosition, sunPositionWCScratch);
 
         size.x *= downSampleWidth / width;
         size.y *= downSampleHeight / height;
@@ -373,12 +374,12 @@ define([
         this._fbo = this._fbo && this._fbo.destroy();
         this._downSampleFBO1 = this._downSampleFBO1 && this._downSampleFBO1.destroy();
         this._downSampleFBO2 = this._downSampleFBO2 && this._downSampleFBO2.destroy();
-        this._downSampleCommand = this._downSampleCommand && this._downSampleCommand.shaderProgram && this._downSampleCommand.shaderProgram.release();
-        this._brightPassCommand = this._brightPassCommand && this._brightPassCommand.shaderProgram && this._brightPassCommand.shaderProgram.release();
-        this._blurXCommand = this._blurXCommand && this._blurXCommand.shaderProgram && this._blurXCommand.shaderProgram.release();
-        this._blurYCommand = this._blurYCommand && this._blurYCommand.shaderProgram && this._blurYCommand.shaderProgram.release();
-        this._blendCommand = this._blendCommand && this._blendCommand.shaderProgram && this._blendCommand.shaderProgram.release();
-        this._fullScreenCommand = this._fullScreenCommand && this._fullScreenCommand.shaderProgram && this._fullScreenCommand.shaderProgram.release();
+        this._downSampleCommand = this._downSampleCommand && this._downSampleCommand.shaderProgram && this._downSampleCommand.shaderProgram.destroy();
+        this._brightPassCommand = this._brightPassCommand && this._brightPassCommand.shaderProgram && this._brightPassCommand.shaderProgram.destroy();
+        this._blurXCommand = this._blurXCommand && this._blurXCommand.shaderProgram && this._blurXCommand.shaderProgram.destroy();
+        this._blurYCommand = this._blurYCommand && this._blurYCommand.shaderProgram && this._blurYCommand.shaderProgram.destroy();
+        this._blendCommand = this._blendCommand && this._blendCommand.shaderProgram && this._blendCommand.shaderProgram.destroy();
+        this._fullScreenCommand = this._fullScreenCommand && this._fullScreenCommand.shaderProgram && this._fullScreenCommand.shaderProgram.destroy();
         return destroyObject(this);
     };
 

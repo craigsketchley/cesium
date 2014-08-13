@@ -1,40 +1,39 @@
 /*global defineSuite*/
 defineSuite([
         'Scene/Material',
-        'Scene/Polygon',
-        'Scene/PolylineCollection',
-        'Specs/createContext',
-        'Specs/destroyContext',
-        'Specs/createCamera',
-        'Specs/createFrameState',
-        'Specs/frameState',
-        'Specs/render',
         'Core/Cartesian3',
         'Core/Cartographic',
         'Core/Color',
         'Core/Ellipsoid',
         'Core/Math',
-        'Renderer/ClearCommand'
+        'Renderer/ClearCommand',
+        'Scene/Polygon',
+        'Scene/PolylineCollection',
+        'Specs/createCamera',
+        'Specs/createContext',
+        'Specs/createFrameState',
+        'Specs/destroyContext',
+        'Specs/render'
     ], function(
         Material,
-        Polygon,
-        PolylineCollection,
-        createContext,
-        destroyContext,
-        createCamera,
-        createFrameState,
-        frameState,
-        render,
         Cartesian3,
         Cartographic,
         Color,
         Ellipsoid,
         CesiumMath,
-        ClearCommand) {
+        ClearCommand,
+        Polygon,
+        PolylineCollection,
+        createCamera,
+        createContext,
+        createFrameState,
+        destroyContext,
+        render) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
     var context;
+    var frameState;
     var polygon;
     var polylines;
     var polyline;
@@ -42,6 +41,7 @@ defineSuite([
 
     beforeAll(function() {
         context = createContext();
+        frameState = createFrameState();
     });
 
     afterAll(function() {
@@ -50,7 +50,11 @@ defineSuite([
 
     beforeEach(function() {
         us = context.uniformState;
-        us.update(context, createFrameState(createCamera(context, new Cartesian3(1.02, 0.0, 0.0), Cartesian3.ZERO, Cartesian3.UNIT_Z)));
+        us.update(context, createFrameState(createCamera({
+            eye : new Cartesian3(1.02, 0.0, 0.0),
+            target : Cartesian3.ZERO,
+            up : Cartesian3.UNIT_Z
+        })));
 
         var ellipsoid = Ellipsoid.UNIT_SPHERE;
         polygon = new Polygon();
@@ -150,18 +154,6 @@ defineSuite([
 
     it('draws NormalMap built-in material', function() {
         verifyMaterial('NormalMap');
-    });
-
-    it('draws Reflection built-in material', function() {
-        verifyMaterial('Reflection');
-    });
-
-    it('draws Refraction built-in material', function() {
-        verifyMaterial('Refraction');
-    });
-
-    it('draws Fresnel built-in material', function() {
-        verifyMaterial('Fresnel');
     });
 
     it('draws Grid built-in material', function() {
@@ -338,7 +330,6 @@ defineSuite([
         var material = new Material({
             strict : true,
             fabric : {
-                type : 'Reflection',
                 uniforms : {
                     cubeMap : {
                         positiveX : './Data/Images/Blue.png',
@@ -348,7 +339,14 @@ defineSuite([
                         positiveZ : './Data/Images/Blue.png',
                         negativeZ : './Data/Images/Blue.png'
                     }
-                }
+                },
+                source : 'uniform samplerCube cubeMap;\n' +
+                    'czm_material czm_getMaterial(czm_materialInput materialInput)\n' +
+                    '{\n' +
+                    '    czm_material material = czm_getDefaultMaterial(materialInput);\n' +
+                    '    material.diffuse = textureCube(cubeMap, vec3(1.0)).xyz;\n' +
+                    '    return material;\n' +
+                    '}\n'
             }
         });
         var pixel = renderMaterial(material);

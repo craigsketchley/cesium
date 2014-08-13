@@ -1,8 +1,10 @@
 /*global define*/
 define([
+        './defaultValue',
         './defined',
         './Fullscreen'
     ], function(
+        defaultValue,
         defined,
         Fullscreen) {
     "use strict";
@@ -113,7 +115,8 @@ define([
      * A set of functions to detect whether the current browser supports
      * various features.
      *
-     * @exports FeatureDetection
+     * @namespace
+     * @alias FeatureDetection
      */
     var FeatureDetection = {
         isChrome : isChrome,
@@ -123,7 +126,8 @@ define([
         isWebkit : isWebkit,
         webkitVersion : webkitVersion,
         isInternetExplorer : isInternetExplorer,
-        internetExplorerVersion : internetExplorerVersion
+        internetExplorerVersion : internetExplorerVersion,
+        hardwareConcurrency : defaultValue(navigator.hardwareConcurrency, 3)
     };
 
     /**
@@ -132,7 +136,7 @@ define([
      * @returns true if the browser supports the full screen standard, false if not.
      *
      * @see Fullscreen
-     * @see <a href='http://dvcs.w3.org/hg/fullscreen/raw-file/tip/Overview.html'>W3C Fullscreen Living Specification</a>
+     * @see {@link http://dvcs.w3.org/hg/fullscreen/raw-file/tip/Overview.html|W3C Fullscreen Living Specification}
      */
     FeatureDetection.supportsFullscreen = function() {
         return Fullscreen.supportsFullscreen();
@@ -143,7 +147,7 @@ define([
      *
      * @returns true if the browser supports typed arrays, false if not.
      *
-     * @see <a href='http://www.khronos.org/registry/typedarray/specs/latest/'>Typed Array Specification</a>
+     * @see {@link http://www.khronos.org/registry/typedarray/specs/latest/|Typed Array Specification}
      */
     FeatureDetection.supportsTypedArrays = function() {
         return typeof ArrayBuffer !== 'undefined';

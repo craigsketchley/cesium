@@ -1,16 +1,17 @@
 /*global define*/
-define(['Core/Event',
-        'DynamicScene/DynamicObjectCollection'
+define([
+        'Core/Event',
+        'DataSources/EntityCollection'
     ], function(
         Event,
-        DynamicObjectCollection) {
+        EntityCollection) {
     "use strict";
 
     var MockDataSource = function() {
         //Values to be fiddled with by the test
         this.changedEvent = new Event();
         this.errorEvent = new Event();
-        this.dynamicObjects = new DynamicObjectCollection();
+        this.entities = new EntityCollection();
         this.name = 'Mock Data';
         this.clock = undefined;
         this.isTimeVarying = false;

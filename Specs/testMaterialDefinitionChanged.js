@@ -1,5 +1,8 @@
 /*global define*/
-define(['DynamicScene/ColorMaterialProperty'], function(ColorMaterialProperty) {
+define([
+        'DataSources/ColorMaterialProperty'
+    ], function(
+        ColorMaterialProperty) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 

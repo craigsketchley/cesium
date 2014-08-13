@@ -1,49 +1,47 @@
 /*global define*/
 define([
-        '../Core/defined',
-        '../Core/DeveloperError',
-        '../Core/Cartographic',
+        '../Core/BoundingRectangle',
         '../Core/Cartesian2',
         '../Core/Cartesian3',
         '../Core/Cartesian4',
-        '../Core/Matrix4',
-        '../Core/BoundingRectangle',
+        '../Core/Cartographic',
+        '../Core/defined',
+        '../Core/DeveloperError',
         '../Core/Math',
+        '../Core/Matrix4',
         './SceneMode'
     ], function(
-        defined,
-        DeveloperError,
-        Cartographic,
+        BoundingRectangle,
         Cartesian2,
         Cartesian3,
         Cartesian4,
-        Matrix4,
-        BoundingRectangle,
+        Cartographic,
+        defined,
+        DeveloperError,
         CesiumMath,
+        Matrix4,
         SceneMode) {
     "use strict";
 
     /**
      * Functions that do scene-dependent transforms between rendering-related coordinate systems.
      *
-     * @exports SceneTransforms
+     * @namespace
+     * @alias SceneTransforms
      */
     var SceneTransforms = {};
 
     var actualPosition = new Cartesian4(0, 0, 0, 1);
     var positionCC = new Cartesian4();
-    var viewProjectionScratch;
+    var viewProjectionScratch = new Matrix4();
 
     /**
      * Transforms a position in WGS84 coordinates to window coordinates.  This is commonly used to place an
      * HTML element at the same screen position as an object in the scene.
      *
-     * @memberof SceneTransforms
-     *
      * @param {Scene} scene The scene.
      * @param {Cartesian3} position The position in WGS84 (world) coordinates.
-     * @param {Cartesian2} [result=undefined] An optional object to return the input position transformed to window coordinates.
-     *
+     * @param {Cartesian2} [result] An optional object to return the input position transformed to window coordinates.
      * @returns {Cartesian2} The modified result parameter or a new Cartesian3 instance if one was not provided.  This may be <code>undefined</code> if the input position is near the center of the ellipsoid.
      *
      * @example
@@ -70,7 +68,6 @@ define([
         SceneTransforms.computeActualWgs84Position(scene.frameState, position, actualPosition);
 
         if (!defined(actualPosition)) {
-            result = undefined;
             return undefined;
         }
 
@@ -79,19 +76,22 @@ define([
         viewProjectionScratch = Matrix4.multiply(camera.frustum.projectionMatrix, camera.viewMatrix, viewProjectionScratch);
         Matrix4.multiplyByVector(viewProjectionScratch, actualPosition, positionCC);
 
-        return SceneTransforms.clipToWindowCoordinates(scene, positionCC, result);
+        if (positionCC.z < 0) {
+            return undefined;
+        }
+
+        result = SceneTransforms.clipToGLWindowCoordinates(scene, positionCC, result);
+        result.y = scene.canvas.clientHeight - result.y;
+        return result;
     };
 
     /**
      * Transforms a position in WGS84 coordinates to drawing buffer coordinates.  This may produce different
      * results from SceneTransforms.wgs84ToWindowCoordinates when the browser zoom is not 100%, or on high-DPI displays.
      *
-     * @memberof SceneTransforms
-     *
      * @param {Scene} scene The scene.
      * @param {Cartesian3} position The position in WGS84 (world) coordinates.
-     * @param {Cartesian2} [result=undefined] An optional object to return the input position transformed to window coordinates.
-     *
+     * @param {Cartesian2} [result] An optional object to return the input position transformed to window coordinates.
      * @returns {Cartesian2} The modified result parameter or a new Cartesian3 instance if one was not provided.  This may be <code>undefined</code> if the input position is near the center of the ellipsoid.
      *
      * @example
@@ -123,7 +123,7 @@ define([
         }
 
         // View-projection matrix to transform from world coordinates to clip coordinates
-        var viewProjection = scene._context.uniformState.viewProjection;
+        var viewProjection = scene.context.uniformState.viewProjection;
         Matrix4.multiplyByVector(viewProjection, Cartesian4.fromElements(actualPosition.x, actualPosition.y, actualPosition.z, 1, positionCC), positionCC);
 
         return SceneTransforms.clipToDrawingBufferCoordinates(scene, positionCC, result);
@@ -142,7 +142,7 @@ define([
             return Cartesian3.clone(position, result);
         }
 
-        var projection = frameState.scene2D.projection;
+        var projection = frameState.mapProjection;
         projection.ellipsoid.cartesianToCartographic(position, positionInCartographic);
         if (!defined(positionInCartographic)) {
             result = undefined;
@@ -176,7 +176,7 @@ define([
     /**
      * @private
      */
-    SceneTransforms.clipToWindowCoordinates = function(scene, position, result) {
+    SceneTransforms.clipToGLWindowCoordinates = function(scene, position, result) {
         var canvas = scene.canvas;
 
         // Perspective divide to transform from clip coordinates to normalized device coordinates
