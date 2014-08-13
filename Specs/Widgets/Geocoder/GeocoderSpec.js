@@ -1,16 +1,12 @@
 /*global defineSuite*/
 defineSuite([
-         'Widgets/Geocoder/Geocoder',
-         'Core/Ellipsoid',
-         'Specs/EventHelper',
-         'Specs/createScene',
-         'Specs/destroyScene'
-     ], function(
-         Geocoder,
-         Ellipsoid,
-         EventHelper,
-         createScene,
-         destroyScene) {
+        'Widgets/Geocoder/Geocoder',
+        'Specs/createScene',
+        'Specs/destroyScene'
+    ], function(
+        Geocoder,
+        createScene,
+        destroyScene) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
@@ -24,7 +20,6 @@ defineSuite([
     });
 
     it('constructor sets expected properties', function() {
-        var ellipsoid = new Ellipsoid();
         var flightDuration = 1234;
         var url = 'bing.invalid/';
         var key = 'testKey';
@@ -32,7 +27,6 @@ defineSuite([
         var geocoder = new Geocoder({
             container : document.body,
             scene : scene,
-            ellipsoid : ellipsoid,
             flightDuration : flightDuration,
             url : url,
             key : key
@@ -40,7 +34,6 @@ defineSuite([
 
         var viewModel = geocoder.viewModel;
         expect(viewModel.scene).toBe(scene);
-        expect(viewModel.ellipsoid).toBe(ellipsoid);
         expect(viewModel.flightDuration).toBe(flightDuration);
         expect(viewModel.url).toBe(url);
         expect(viewModel.key).toBe(key);
@@ -71,7 +64,7 @@ defineSuite([
             return new Geocoder({
                 container : document.body
             });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('constructor throws with no element', function() {
@@ -79,7 +72,7 @@ defineSuite([
             return new Geocoder({
                 scene : scene
             });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('constructor throws with string element that does not exist', function() {
@@ -88,6 +81,6 @@ defineSuite([
                 container : 'does not exist',
                 scene : scene
             });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 }, 'WebGL');

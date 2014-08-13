@@ -1,10 +1,5 @@
 /*global define*/
-define([
-        './defined',
-        './DeveloperError'
-    ], function(
-        defined,
-        DeveloperError) {
+define(function() {
     "use strict";
 
     /**
@@ -14,7 +9,9 @@ define([
      * These parameters correspond to the parameters in the Report from the IAU/IAG Working Group
      * except that they are expressed in radians.
      * </p>
-     * @exports IauOrientationParameters
+     *
+     * @namespace
+     * @alias IauOrientationParameters
      *
      * @private
      */
@@ -23,6 +20,8 @@ define([
          * The right ascension of the north pole of the body with respect to
          * the International Celestial Reference Frame, in radians.
          * @type {Number}
+         *
+         * @private
          */
         this.rightAscension = rightAscension;
 
@@ -30,6 +29,8 @@ define([
          * The declination of the north pole of the body with respect to
          * the International Celestial Reference Frame, in radians.
          * @type {Number}
+         *
+         * @private
          */
         this.declination = declination;
 
@@ -37,12 +38,16 @@ define([
          * The rotation about the north pole used to align a set of axes with
          * the meridian defined by the IAU report, in radians.
          * @type {Number}
+         *
+         * @private
          */
         this.rotation = rotation;
 
         /**
          * The instantaneous rotation rate about the north pole, in radians per second.
          * @type {Number}
+         *
+         * @private
          */
         this.rotationRate = rotationRate;
     };

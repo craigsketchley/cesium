@@ -1,23 +1,23 @@
 /*global defineSuite*/
 defineSuite([
-         'Core/PolylineGeometry',
-         'Core/Cartesian3',
-         'Core/PrimitiveType',
-         'Core/VertexFormat',
-         'Core/Color'
-     ], function(
-         PolylineGeometry,
-         Cartesian3,
-         PrimitiveType,
-         VertexFormat,
-         Color) {
+        'Core/PolylineGeometry',
+        'Core/Cartesian3',
+        'Core/Color',
+        'Core/Ellipsoid',
+        'Core/VertexFormat'
+    ], function(
+        PolylineGeometry,
+        Cartesian3,
+        Color,
+        Ellipsoid,
+        VertexFormat) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
     it('constructor throws with no positions', function() {
         expect(function() {
             return new PolylineGeometry();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('constructor throws with less than two positions', function() {
@@ -25,7 +25,7 @@ defineSuite([
             return new PolylineGeometry({
                 positions : [Cartesian3.ZERO]
             });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('constructor throws with invalid width', function() {
@@ -34,7 +34,7 @@ defineSuite([
                 positions : [Cartesian3.ZERO, Cartesian3.UNIT_X],
                 width : -1
             });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('constructor throws with invalid number of colors', function() {
@@ -43,15 +43,17 @@ defineSuite([
                 positions : [Cartesian3.ZERO, Cartesian3.UNIT_X, Cartesian3.UNIT_Y],
                 colors : []
             });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('constructor computes all vertex attributes', function() {
-        var positions = [new Cartesian3(), new Cartesian3(1.0, 0.0, 0.0), new Cartesian3(2.0, 0.0, 0.0)];
+        var positions = [new Cartesian3(1.0, 0.0, 0.0), new Cartesian3(0.0, 1.0, 0.0), new Cartesian3(0.0, 0.0, 1.0)];
         var line = PolylineGeometry.createGeometry(new PolylineGeometry({
             positions : positions,
             width : 10.0,
-            vertexFormat : VertexFormat.ALL
+            vertexFormat : VertexFormat.ALL,
+            granularity : Math.PI,
+            ellipsoid: Ellipsoid.UNIT_SPHERE
         }));
 
         expect(line.attributes.position).toBeDefined();
@@ -70,13 +72,15 @@ defineSuite([
     });
 
     it('constructor computes per segment colors', function() {
-        var positions = [new Cartesian3(), new Cartesian3(1.0, 0.0, 0.0), new Cartesian3(2.0, 0.0, 0.0)];
+        var positions = [new Cartesian3(1.0, 0.0, 0.0), new Cartesian3(0.0, 1.0, 0.0), new Cartesian3(0.0, 0.0, 1.0)];
         var colors = [new Color(1.0, 0.0, 0.0, 1.0), new Color(0.0, 1.0, 0.0, 1.0), new Color(0.0, 0.0, 1.0, 1.0)];
         var line = PolylineGeometry.createGeometry(new PolylineGeometry({
             positions : positions,
             colors : colors,
             width : 10.0,
-            vertexFormat : VertexFormat.ALL
+            vertexFormat : VertexFormat.ALL,
+            granularity : Math.PI,
+            ellipsoid: Ellipsoid.UNIT_SPHERE
         }));
 
         expect(line.attributes.color).toBeDefined();
@@ -86,14 +90,16 @@ defineSuite([
     });
 
     it('constructor computes per vertex colors', function() {
-        var positions = [new Cartesian3(), new Cartesian3(1.0, 0.0, 0.0), new Cartesian3(2.0, 0.0, 0.0)];
+        var positions = [new Cartesian3(1.0, 0.0, 0.0), new Cartesian3(0.0, 1.0, 0.0), new Cartesian3(0.0, 0.0, 1.0)];
         var colors = [new Color(1.0, 0.0, 0.0, 1.0), new Color(0.0, 1.0, 0.0, 1.0), new Color(0.0, 0.0, 1.0, 1.0)];
         var line = PolylineGeometry.createGeometry(new PolylineGeometry({
             positions : positions,
             colors : colors,
             colorsPerVertex : true,
             width : 10.0,
-            vertexFormat : VertexFormat.ALL
+            vertexFormat : VertexFormat.ALL,
+            granularity : Math.PI,
+            ellipsoid: Ellipsoid.UNIT_SPHERE
         }));
 
         expect(line.attributes.color).toBeDefined();

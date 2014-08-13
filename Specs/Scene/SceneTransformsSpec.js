@@ -1,18 +1,18 @@
 /*global defineSuite*/
 defineSuite([
-         'Scene/SceneTransforms',
-         'Core/Cartographic',
-         'Core/Ellipsoid',
-         'Core/Math',
-         'Specs/createScene',
-         'Specs/destroyScene'
-     ], function(
-         SceneTransforms,
-         Cartographic,
-         Ellipsoid,
-         CesiumMath,
-         createScene,
-         destroyScene) {
+        'Scene/SceneTransforms',
+        'Core/Cartographic',
+        'Core/Ellipsoid',
+        'Core/Math',
+        'Specs/createScene',
+        'Specs/destroyScene'
+    ], function(
+        SceneTransforms,
+        Cartographic,
+        Ellipsoid,
+        CesiumMath,
+        createScene,
+        destroyScene) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
@@ -31,33 +31,32 @@ defineSuite([
         var position = ellipsoid.cartographicToCartesian(new Cartographic(0.0, 0.0));
         expect(function() {
             SceneTransforms.wgs84ToWindowCoordinates(undefined, position);
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('throws an exception without position', function() {
         expect(function() {
             SceneTransforms.wgs84ToWindowCoordinates(scene);
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('returns correct window position', function() {
         var ellipsoid = Ellipsoid.WGS84;
-        var positionCartographic = ellipsoid.cartesianToCartographic(scene.getCamera().position);
+        var positionCartographic = ellipsoid.cartesianToCartographic(scene.camera.position);
         positionCartographic.height = 0.0;
         var position = ellipsoid.cartographicToCartesian(positionCartographic);
 
         // Update scene state
         scene.initializeFrame();
-        scene.render();
 
         var windowCoordinates = SceneTransforms.wgs84ToWindowCoordinates(scene, position);
-        expect(windowCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
-        expect(windowCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
+        expect(windowCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
+        expect(windowCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
     });
 
     it('returns correct drawing buffer position', function() {
         var ellipsoid = Ellipsoid.WGS84;
-        var positionCartographic = ellipsoid.cartesianToCartographic(scene.getCamera().position);
+        var positionCartographic = ellipsoid.cartesianToCartographic(scene.camera.position);
         positionCartographic.height = 0.0;
         var position = ellipsoid.cartographicToCartesian(positionCartographic);
 
@@ -66,8 +65,8 @@ defineSuite([
         scene.render();
 
         var drawingBufferCoordinates = SceneTransforms.wgs84ToDrawingBufferCoordinates(scene, position);
-        expect(drawingBufferCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
-        expect(drawingBufferCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON3);
+        expect(drawingBufferCoordinates.x).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
+        expect(drawingBufferCoordinates.y).toEqualEpsilon(0.5, CesiumMath.EPSILON1);
     });
 
 }, 'WebGL');

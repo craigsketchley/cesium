@@ -2,19 +2,21 @@
 define([
         './defined',
         './DeveloperError',
+        './freezeObject',
         './Math'
     ], function(
         defined,
         DeveloperError,
+        freezeObject,
         CesiumMath) {
     "use strict";
 
     /**
      * Constants for WebGL index datatypes.  These corresponds to the
-     * <code>type</code> parameter of <a href="http://www.khronos.org/opengles/sdk/docs/man/xhtml/glDrawElements.xml">drawElements</a>.
+     * <code>type</code> parameter of {@link http://www.khronos.org/opengles/sdk/docs/man/xhtml/glDrawElements.xml|drawElements}.
      *
+     * @namespace
      * @alias IndexDatatype
-     * @enumeration
      */
     var IndexDatatype = {
         /**
@@ -49,14 +51,11 @@ define([
      * Returns the size, in bytes, of the corresponding datatype.
      *
      * @param {IndexDatatype} indexDatatype The index datatype to get the size of.
-     *
      * @returns {Number} The size in bytes.
-     *
-     * @exception {DeveloperError} indexDatatype is required and must be a valid IndexDatatype constant.
      *
      * @example
      * // Returns 2
-     * var size = IndexDatatype.getSizeInBytes(IndexDatatype.UNSIGNED_SHORT);
+     * var size = Cesium.IndexDatatype.getSizeInBytes(Cesium.IndexDatatype.UNSIGNED_SHORT);
      */
     IndexDatatype.getSizeInBytes = function(indexDatatype) {
         switch(indexDatatype) {
@@ -68,19 +67,20 @@ define([
                 return Uint32Array.BYTES_PER_ELEMENT;
         }
 
+        //>>includeStart('debug', pragmas.debug);
         throw new DeveloperError('indexDatatype is required and must be a valid IndexDatatype constant.');
+        //>>includeEnd('debug');
     };
 
     /**
      * Validates that the provided index datatype is a valid {@link IndexDatatype}.
      *
      * @param {IndexDatatype} indexDatatype The index datatype to validate.
-     *
      * @returns {Boolean} <code>true</code> if the provided index datatype is a valid value; otherwise, <code>false</code>.
      *
      * @example
-     * if (!IndexDatatype.validate(indexDatatype)) {
-     *   throw new DeveloperError('indexDatatype must be a valid value.');
+     * if (!Cesium.IndexDatatype.validate(indexDatatype)) {
+     *   throw new Cesium.DeveloperError('indexDatatype must be a valid value.');
      * }
      */
     IndexDatatype.validate = function(indexDatatype) {
@@ -96,18 +96,17 @@ define([
      *
      * @param {Number} numberOfVertices Number of vertices that the indices will reference.
      * @param {Any} indicesLengthOrArray Passed through to the typed array constructor.
-     *
-     * @returns {Array} A <code>Uint16Array</code> or <code>Uint32Array</code> constructed with <code>indicesLengthOrArray</code>.
-     *
-     * @exception {DeveloperError} center is required.
+     * @returns {Uint16Aray|Uint32Array} A <code>Uint16Array</code> or <code>Uint32Array</code> constructed with <code>indicesLengthOrArray</code>.
      *
      * @example
-     * this.indices = IndexDatatype.createTypedArray(positions.length / 3, numberOfIndices);
+     * this.indices = Cesium.IndexDatatype.createTypedArray(positions.length / 3, numberOfIndices);
      */
     IndexDatatype.createTypedArray = function(numberOfVertices, indicesLengthOrArray) {
+        //>>includeStart('debug', pragmas.debug);
         if (!defined(numberOfVertices)) {
             throw new DeveloperError('numberOfVertices is required.');
         }
+        //>>includeEnd('debug');
 
         if (numberOfVertices > CesiumMath.SIXTY_FOUR_KILOBYTES) {
             return new Uint32Array(indicesLengthOrArray);
@@ -116,5 +115,5 @@ define([
         return new Uint16Array(indicesLengthOrArray);
     };
 
-    return IndexDatatype;
+    return freezeObject(IndexDatatype);
 });
