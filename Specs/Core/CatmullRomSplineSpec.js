@@ -1,14 +1,14 @@
 /*global defineSuite*/
 defineSuite([
-         'Core/CatmullRomSpline',
-         'Core/Cartesian3',
-         'Core/HermiteSpline',
-         'Core/Math'
-     ], function(
-         CatmullRomSpline,
-         Cartesian3,
-         HermiteSpline,
-         CesiumMath) {
+        'Core/CatmullRomSpline',
+        'Core/Cartesian3',
+        'Core/HermiteSpline',
+        'Core/Math'
+    ], function(
+        CatmullRomSpline,
+        Cartesian3,
+        HermiteSpline,
+        CesiumMath) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
@@ -25,26 +25,18 @@ defineSuite([
         times = [0.0, 1.0, 2.0, 3.0];
     });
 
-    it('constructor throws without points', function() {
+    it('constructor throws without points or times', function() {
         expect(function() {
             return new CatmullRomSpline();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
-    it('constructor throws when control points length is less than 3', function() {
+    it('constructor throws when control points length is less than 2', function() {
         expect(function() {
             return new CatmullRomSpline({
                 points : [Cartesian3.ZERO]
             });
-        }).toThrow();
-    });
-
-    it('constructor throws without times', function() {
-        expect(function() {
-            return new CatmullRomSpline({
-                points : points
-            });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('constructor throws when times.length is not equal to points.length', function() {
@@ -53,12 +45,12 @@ defineSuite([
                 points : points,
                 times : [0.0, 1.0]
             });
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('sets start and end tangents', function() {
-        var start = Cartesian3.subtract(points[1], points[0]);
-        var end = Cartesian3.subtract(points[points.length - 1], points[points.length - 2]);
+        var start = Cartesian3.subtract(points[1], points[0], new Cartesian3());
+        var end = Cartesian3.subtract(points[points.length - 1], points[points.length - 2], new Cartesian3());
         var crs = new CatmullRomSpline({
             points : points,
             times : times,
@@ -75,13 +67,15 @@ defineSuite([
         var controlPoint1 = Cartesian3.clone(points[1]);
         var controlPoint2 = Cartesian3.clone(points[2]);
 
-        var start = Cartesian3.multiplyByScalar(Cartesian3.subtract(Cartesian3.subtract(Cartesian3.multiplyByScalar(controlPoint1, 2.0), controlPoint2), controlPoint0), 0.5);
+        var start = new Cartesian3();
+        start = Cartesian3.multiplyByScalar(Cartesian3.subtract(Cartesian3.subtract(Cartesian3.multiplyByScalar(controlPoint1, 2.0, start), controlPoint2, start), controlPoint0, start), 0.5, start);
 
         var controlPointn0 = Cartesian3.clone(points[points.length - 1]);
         var controlPointn1 = Cartesian3.clone(points[points.length - 2]);
         var controlPointn2 = Cartesian3.clone(points[points.length - 3]);
 
-        var end = Cartesian3.multiplyByScalar(Cartesian3.add(Cartesian3.subtract(controlPointn0, Cartesian3.multiplyByScalar(controlPointn1, 2.0)), controlPointn2), 0.5);
+        var end = new Cartesian3();
+        end = Cartesian3.multiplyByScalar(Cartesian3.add(Cartesian3.subtract(controlPointn0, Cartesian3.multiplyByScalar(controlPointn1, 2.0, end), end), controlPointn2, end), 0.5, end);
 
         var crs = new CatmullRomSpline({
             points : points,
@@ -100,7 +94,7 @@ defineSuite([
 
         expect(function() {
             crs.evaluate();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('evaluate throws when time is out of range', function() {
@@ -111,7 +105,7 @@ defineSuite([
 
         expect(function() {
             crs.evaluate(times[0] - 1.0);
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('check Catmull-Rom spline against a Hermite spline', function() {
@@ -122,11 +116,11 @@ defineSuite([
 
         var tangents = [crs.firstTangent];
         for ( var i = 1; i < points.length - 1; ++i) {
-            tangents.push(Cartesian3.multiplyByScalar(Cartesian3.subtract(points[i + 1], points[i - 1]), 0.5));
+            tangents.push(Cartesian3.multiplyByScalar(Cartesian3.subtract(points[i + 1], points[i - 1], new Cartesian3()), 0.5, new Cartesian3()));
         }
         tangents.push(crs.lastTangent);
 
-        var hs = new HermiteSpline({
+        var hs = HermiteSpline.createC1({
             points : points,
             tangents : tangents,
             times : times
@@ -160,7 +154,7 @@ defineSuite([
         });
 
         var t = (times[0] + times[1]) * 0.5;
-        expect(crs.evaluate(t)).toEqual(Cartesian3.lerp(points[0], points[1], t));
+        expect(crs.evaluate(t)).toEqual(Cartesian3.lerp(points[0], points[1], t, new Cartesian3()));
     });
 
     it('spline with 2 control points defaults to lerp and result parameter', function() {
@@ -176,6 +170,6 @@ defineSuite([
         var result = new Cartesian3();
         var actual = crs.evaluate(t, result);
         expect(actual).toBe(result);
-        expect(actual).toEqual(Cartesian3.lerp(points[0], points[1], t));
+        expect(actual).toEqual(Cartesian3.lerp(points[0], points[1], t, new Cartesian3()));
     });
 });

@@ -1,20 +1,20 @@
 /*global defineSuite*/
 defineSuite([
-         'Core/IntersectionTests',
-         'Core/Cartesian3',
-         'Core/defined',
-         'Core/Ellipsoid',
-         'Core/Math',
-         'Core/Plane',
-         'Core/Ray'
-     ], function(
-         IntersectionTests,
-         Cartesian3,
-         defined,
-         Ellipsoid,
-         CesiumMath,
-         Plane,
-         Ray) {
+        'Core/IntersectionTests',
+        'Core/BoundingSphere',
+        'Core/Cartesian3',
+        'Core/Ellipsoid',
+        'Core/Math',
+        'Core/Plane',
+        'Core/Ray'
+    ], function(
+        IntersectionTests,
+        BoundingSphere,
+        Cartesian3,
+        Ellipsoid,
+        CesiumMath,
+        Plane,
+        Ray) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
@@ -48,25 +48,459 @@ defineSuite([
     it('rayPlane throws without ray', function() {
         expect(function() {
             IntersectionTests.rayPlane();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('rayPlane throws without plane', function() {
         expect(function() {
             IntersectionTests.rayPlane(new Ray(new Cartesian3(), new Cartesian3()));
-        }).toThrow();
+        }).toThrowDeveloperError();
+    });
+
+    it('rayTriangle throws without ray', function() {
+        expect(function() {
+            IntersectionTests.rayTriangle();
+        }).toThrowDeveloperError();
+    });
+
+    it('rayTriangle throws without p0', function() {
+        expect(function() {
+            IntersectionTests.rayTriangle(new Ray());
+        }).toThrowDeveloperError();
+    });
+
+    it('rayTriangle throws without p1', function() {
+        expect(function() {
+            IntersectionTests.rayTriangle(new Ray(), new Cartesian3());
+        }).toThrowDeveloperError();
+    });
+
+    it('rayTriangle throws without p2', function() {
+        expect(function() {
+            IntersectionTests.rayTriangle(new Ray(), new Cartesian3(), new Cartesian3());
+        }).toThrowDeveloperError();
+    });
+
+    it('rayTriangle intersects front face', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(Cartesian3.UNIT_Z, Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()));
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2);
+        expect(intersection).toEqual(Cartesian3.ZERO);
+    });
+
+    it('rayTriangle intersects back face without culling', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()), Cartesian3.UNIT_Z);
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2);
+        expect(intersection).toEqual(Cartesian3.ZERO);
+    });
+
+    it('rayTriangle does not intersect back face with culling', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()), Cartesian3.UNIT_Z);
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2, true);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('rayTriangle does not intersect outside the 0-1 edge', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(new Cartesian3(0.0, -1.0, 1.0), Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()));
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('rayTriangle does not intersect outside the 1-2 edge', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(new Cartesian3(1.0, 1.0, 1.0), Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()));
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('rayTriangle does not intersect outside the 2-0 edge', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(new Cartesian3(-1.0, 1.0, 1.0), Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()));
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('rayTriangle does not intersect parallel ray and triangle', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(new Cartesian3(-1.0, 0.0, 1.0), Cartesian3.UNIT_X);
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('rayTriangle does not intersect behind the ray origin', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var ray = new Ray(Cartesian3.UNIT_Z, Cartesian3.UNIT_Z);
+
+        var intersection = IntersectionTests.rayTriangle(ray, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('lineSegmentTriangle throws without v0', function() {
+        expect(function() {
+            IntersectionTests.lineSegmentTriangle();
+        }).toThrowDeveloperError();
+    });
+
+    it('lineSegmentTriangle throws without v1', function() {
+        expect(function() {
+            IntersectionTests.lineSegmentTriangle(new Cartesian3());
+        }).toThrowDeveloperError();
+    });
+
+    it('lineSegmentTriangle throws without p0', function() {
+        expect(function() {
+            IntersectionTests.lineSegmentTriangle(new Cartesian3(), new Cartesian3());
+        }).toThrowDeveloperError();
+    });
+
+    it('lineSegmentTriangle throws without p1', function() {
+        expect(function() {
+            IntersectionTests.lineSegmentTriangle(new Cartesian3(), new Cartesian3(), new Cartesian3());
+        }).toThrowDeveloperError();
+    });
+
+    it('lineSegmentTriangle throws without p2', function() {
+        expect(function() {
+            IntersectionTests.lineSegmentTriangle(new Cartesian3(), new Cartesian3(), new Cartesian3(), new Cartesian3());
+        }).toThrowDeveloperError();
+    });
+
+    it('lineSegmentTriangle intersects front face', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = Cartesian3.UNIT_Z;
+        var v1 = Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3());
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).toEqual(Cartesian3.ZERO);
+    });
+
+    it('lineSegmentTriangle intersects back face without culling', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3());
+        var v1 = Cartesian3.UNIT_Z;
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).toEqual(Cartesian3.ZERO);
+    });
+
+    it('lineSegmentTriangle does not intersect back face with culling', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3());
+        var v1 = Cartesian3.UNIT_Z;
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2, true);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('lineSegmentTriangle does not intersect outside the 0-1 edge', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = new Cartesian3(0.0, -1.0, 1.0);
+        var v1 = Cartesian3.add(v0, Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()), new Cartesian3());
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('lineSegmentTriangle does not intersect outside the 1-2 edge', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = new Cartesian3(1.0, 1.0, 1.0);
+        var v1 = Cartesian3.add(v0, Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()), new Cartesian3());
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('lineSegmentTriangle does not intersect outside the 2-0 edge', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = new Cartesian3(-1.0, 1.0, 1.0);
+        var v1 = Cartesian3.add(v0, Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()), new Cartesian3());
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('lineSegmentTriangle does not intersect parallel ray and triangle', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = new Cartesian3(-1.0, 0.0, 1.0);
+        var v1 = Cartesian3.add(v0, Cartesian3.UNIT_X, new Cartesian3());
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('lineSegmentTriangle does not intersect behind the v0', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = Cartesian3.UNIT_Z;
+        var v1 = Cartesian3.multiplyByScalar(Cartesian3.UNIT_Z, 2.0, new Cartesian3());
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('lineSegmentTriangle does not intersect behind the v1', function() {
+        var p0 = new Cartesian3(-1.0, 0.0, 0.0);
+        var p1 = new Cartesian3(1.0, 0.0, 0.0);
+        var p2 = new Cartesian3(0.0, 1.0, 0.0);
+
+        var v0 = Cartesian3.multiplyByScalar(Cartesian3.UNIT_Z, 2.0, new Cartesian3());
+        var v1 = Cartesian3.UNIT_Z;
+
+        var intersection = IntersectionTests.lineSegmentTriangle(v0, v1, p0, p1, p2);
+        expect(intersection).not.toBeDefined();
+    });
+
+    it('raySphere throws without ray', function() {
+        expect(function() {
+            IntersectionTests.raySphere();
+        }).toThrowDeveloperError();
+    });
+
+    it('raySphere throws without ellipsoid', function() {
+        expect(function() {
+            IntersectionTests.raySphere(new Ray());
+        }).toThrowDeveloperError();
+    });
+
+    it('raySphere outside intersections', function() {
+        var unitSphere = new BoundingSphere(Cartesian3.ZERO, 1.0);
+
+        var ray = new Ray(new Cartesian3(2.0, 0.0, 0.0), new Cartesian3(-1.0, 0.0, 0.0));
+        var intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(0.0, 2.0, 0.0), new Cartesian3(0.0, -1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(0.0, 0.0, 2.0), new Cartesian3(0.0, 0.0, -1.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(1.0, 1.0, 0.0), new Cartesian3(-1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(-2.0, 0.0, 0.0), new Cartesian3(1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(0.0, -2.0, 0.0), new Cartesian3(0.0, 1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(0.0, 0.0, -2.0), new Cartesian3(0.0, 0.0, 1.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(-1.0, -1.0, 0.0), new Cartesian3(1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(-2.0, 0.0, 0.0), new Cartesian3(-1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).toBeUndefined();
+
+        ray = new Ray(new Cartesian3(0.0, -2.0, 0.0), new Cartesian3(0.0, -1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).toBeUndefined();
+
+        ray = new Ray(new Cartesian3(0.0, 0.0, -2.0), new Cartesian3(0.0, 0.0, -1.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).toBeUndefined();
+    });
+
+    it('raySphere ray inside pointing in intersection', function() {
+        var sphere = new BoundingSphere(Cartesian3.ZERO, 5000.0);
+
+        var origin = new Cartesian3(200.0, 0.0, 0.0);
+        var direction = Cartesian3.negate(Cartesian3.normalize(origin, new Cartesian3()), new Cartesian3());
+        var ray = new Ray(origin, direction);
+
+        var expected = {
+            start : 0.0,
+            stop : sphere.radius + origin.x
+        };
+        var actual = IntersectionTests.raySphere(ray, sphere);
+
+        expect(actual).toBeDefined();
+        expect(actual.start).toEqual(expected.start);
+        expect(actual.stop).toEqual(expected.stop);
+    });
+
+    it('raySphere ray inside pointing out intersection', function() {
+        var sphere = new BoundingSphere(Cartesian3.ZERO, 5000.0);
+
+        var origin = new Cartesian3(200.0, 0.0, 0.0);
+        var direction = Cartesian3.normalize(origin, new Cartesian3());
+        var ray = new Ray(origin, direction);
+
+        var expected = {
+                start : 0.0,
+                stop : sphere.radius - origin.x
+        };
+        var actual = IntersectionTests.raySphere(ray, sphere);
+
+        expect(actual).toBeDefined();
+        expect(actual.start).toEqual(expected.start);
+        expect(actual.stop).toEqual(expected.stop);
+    });
+
+    it('raySphere tangent intersections', function() {
+        var unitSphere = new BoundingSphere(Cartesian3.ZERO, 1.0);
+
+        var ray = new Ray(Cartesian3.UNIT_X, Cartesian3.UNIT_Z);
+        var intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).not.toBeDefined();
+    });
+
+    it('raySphere no intersections', function() {
+        var unitSphere = new BoundingSphere(Cartesian3.ZERO, 1.0);
+
+        var ray = new Ray(new Cartesian3(2.0, 0.0, 0.0), new Cartesian3(0.0, 0.0, 1.0));
+        var intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).not.toBeDefined();
+
+        ray = new Ray(new Cartesian3(2.0, 0.0, 0.0), new Cartesian3(0.0, 0.0, -1.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).not.toBeDefined();
+
+        ray = new Ray(new Cartesian3(2.0, 0.0, 0.0), new Cartesian3(0.0, 1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).not.toBeDefined();
+
+        ray = new Ray(new Cartesian3(2.0, 0.0, 0.0), new Cartesian3(0.0, -1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).not.toBeDefined();
+    });
+
+    it('raySphere intersection with sphere center not the origin', function() {
+        var unitSphere = new BoundingSphere(new Cartesian3(200.0, 0.0, 0.0), 1.0);
+
+        var ray = new Ray(new Cartesian3(202.0, 0.0, 0.0), new Cartesian3(-1.0, 0.0, 0.0));
+        var intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(200.0, 2.0, 0.0), new Cartesian3(0.0, -1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(200.0, 0.0, 2.0), new Cartesian3(0.0, 0.0, -1.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(201.0, 1.0, 0.0), new Cartesian3(-1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(198.0, 0.0, 0.0), new Cartesian3(1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(200.0, -2.0, 0.0), new Cartesian3(0.0, 1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(200.0, 0.0, -2.0), new Cartesian3(0.0, 0.0, 1.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+        expect(intersections.stop).toEqualEpsilon(3.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(199.0, -1.0, 0.0), new Cartesian3(1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections.start).toEqualEpsilon(1.0, CesiumMath.EPSILON14);
+
+        ray = new Ray(new Cartesian3(198.0, 0.0, 0.0), new Cartesian3(-1.0, 0.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).toBeUndefined();
+
+        ray = new Ray(new Cartesian3(200.0, -2.0, 0.0), new Cartesian3(0.0, -1.0, 0.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).toBeUndefined();
+
+        ray = new Ray(new Cartesian3(200.0, 0.0, -2.0), new Cartesian3(0.0, 0.0, -1.0));
+        intersections = IntersectionTests.raySphere(ray, unitSphere);
+        expect(intersections).toBeUndefined();
     });
 
     it('rayEllipsoid throws without ray', function() {
         expect(function() {
             IntersectionTests.rayEllipsoid();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('rayEllipsoid throws without ellipsoid', function() {
         expect(function() {
             IntersectionTests.rayEllipsoid(new Ray(new Cartesian3(), new Cartesian3()));
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('rayEllipsoid outside intersections', function() {
@@ -127,12 +561,12 @@ defineSuite([
         var ellipsoid = Ellipsoid.WGS84;
 
         var origin = new Cartesian3(20000.0, 0.0, 0.0);
-        var direction = Cartesian3.negate(Cartesian3.normalize(origin));
+        var direction = Cartesian3.negate(Cartesian3.normalize(origin, new Cartesian3()), new Cartesian3());
         var ray = new Ray(origin, direction);
 
         var expected = {
                 start : 0.0,
-                stop : ellipsoid.getRadii().x + origin.x
+                stop : ellipsoid.radii.x + origin.x
         };
         var actual = IntersectionTests.rayEllipsoid(ray, ellipsoid);
 
@@ -145,12 +579,12 @@ defineSuite([
         var ellipsoid = Ellipsoid.WGS84;
 
         var origin = new Cartesian3(20000.0, 0.0, 0.0);
-        var direction = Cartesian3.normalize(origin);
+        var direction = Cartesian3.normalize(origin, new Cartesian3());
         var ray = new Ray(origin, direction);
 
         var expected = {
                 start : 0.0,
-                stop : ellipsoid.getRadii().x - origin.x
+                stop : ellipsoid.radii.x - origin.x
         };
         var actual = IntersectionTests.rayEllipsoid(ray, ellipsoid);
 
@@ -190,13 +624,13 @@ defineSuite([
     it('grazingAltitudeLocation throws without ray', function() {
         expect(function() {
             IntersectionTests.grazingAltitudeLocation();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('grazingAltitudeLocation throws without ellipsoid', function() {
         expect(function() {
             IntersectionTests.grazingAltitudeLocation(new Ray());
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('grazingAltitudeLocation is origin of ray', function() {
@@ -212,7 +646,7 @@ defineSuite([
         var actual = IntersectionTests.grazingAltitudeLocation(ray, ellipsoid);
         expect(actual).toEqualEpsilon(expected, CesiumMath.EPSILON15);
 
-        ray = new Ray(new Cartesian3(0.0, 2.0, 2.0), Cartesian3.negate(Cartesian3.UNIT_Y));
+        ray = new Ray(new Cartesian3(0.0, 2.0, 2.0), Cartesian3.negate(Cartesian3.UNIT_Y, new Cartesian3()));
         expected = new Cartesian3(0.0, 0.0, 2.0);
         actual = IntersectionTests.grazingAltitudeLocation(ray, ellipsoid);
         expect(actual).toEqualEpsilon(expected, CesiumMath.EPSILON15);
@@ -300,19 +734,19 @@ defineSuite([
     it('lineSegmentPlane throws without endPoint0', function() {
         expect(function() {
             IntersectionTests.lineSegmentPlane();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('lineSegmentPlane throws without endPoint1', function() {
         expect(function() {
             IntersectionTests.lineSegmentPlane(new Cartesian3());
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('lineSegmentPlane throws without plane', function() {
         expect(function() {
             IntersectionTests.lineSegmentPlane(new Cartesian3(), new Cartesian3());
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('triangle is front of a plane', function() {
@@ -326,7 +760,7 @@ defineSuite([
      });
 
     it('triangle is behind a plane', function() {
-        var plane = new Plane(Cartesian3.negate(Cartesian3.UNIT_Z), 0.0);
+        var plane = new Plane(Cartesian3.negate(Cartesian3.UNIT_Z, new Cartesian3()), 0.0);
         var p0 = new Cartesian3(0.0, 0.0, 2.0);
         var p1 = new Cartesian3(0.0, 1.0, 2.0);
         var p2 = new Cartesian3(1.0, 0.0, 2.0);
@@ -413,7 +847,7 @@ defineSuite([
     it('trianglePlaneIntersection throws without p0', function() {
         expect(function() {
             return IntersectionTests.trianglePlaneIntersection();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('trianglePlaneIntersection throws without p1', function() {
@@ -421,7 +855,7 @@ defineSuite([
 
         expect(function() {
             return IntersectionTests.trianglePlaneIntersection(p);
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('trianglePlaneIntersection throws without p2', function() {
@@ -429,7 +863,7 @@ defineSuite([
 
         expect(function() {
             return IntersectionTests.trianglePlaneIntersection(p, p);
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('trianglePlaneIntersection throws without plane', function() {
@@ -437,6 +871,6 @@ defineSuite([
 
         expect(function() {
             return IntersectionTests.trianglePlaneIntersection(p, p, p);
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 });

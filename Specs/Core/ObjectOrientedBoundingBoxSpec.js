@@ -1,22 +1,18 @@
 /*global defineSuite*/
 defineSuite([
-         'Core/ObjectOrientedBoundingBox',
-         'Core/Cartesian3',
-         'Core/Cartesian4',
-         'Core/Math',
-         'Core/Matrix3',
-         'Core/Quaternion',
-         'Core/Intersect',
-         'Core/BoundingRectangle'
-     ], function(
-         ObjectOrientedBoundingBox,
-         Cartesian3,
-         Cartesian4,
-         CesiumMath,
-         Matrix3,
-         Quaternion,
-         Intersect,
-         BoundingRectangle) {
+        'Core/ObjectOrientedBoundingBox',
+        'Core/BoundingRectangle',
+        'Core/Cartesian3',
+        'Core/Math',
+        'Core/Matrix3',
+        'Core/Quaternion'
+    ], function(
+        ObjectOrientedBoundingBox,
+        BoundingRectangle,
+        Cartesian3,
+        CesiumMath,
+        Matrix3,
+        Quaternion) {
     "use strict";
     /*global jasmine,describe,xdescribe,it,xit,expect,beforeEach,afterEach,beforeAll,afterAll,spyOn,runs,waits,waitsFor*/
 
@@ -45,7 +41,7 @@ defineSuite([
         var rotation = Matrix3.fromQuaternion(quaternion);
 
         for (var i = 0; i < positions.length; ++i) {
-            points.push(Matrix3.multiplyByVector(rotation, positions[i]));
+            points.push(Matrix3.multiplyByVector(rotation, positions[i], new Cartesian3()));
         }
 
         return {
@@ -57,7 +53,7 @@ defineSuite([
     function translatePositions(positions, translation) {
         var points = [];
         for (var i = 0; i < positions.length; ++i) {
-            points.push(Cartesian3.add(translation, positions[i]));
+            points.push(Cartesian3.add(translation, positions[i], new Cartesian3()));
         }
 
         return points;
@@ -150,7 +146,7 @@ defineSuite([
     it('fromBoundingRectangle throws without rectangle', function() {
         expect(function() {
             ObjectOrientedBoundingBox.fromBoundingRectangle();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('fromBoundingRectangle sets the transformation matrix to identity without rotation', function() {
@@ -183,13 +179,13 @@ defineSuite([
     it('intersect throws without left box', function() {
         expect(function() {
             ObjectOrientedBoundingBox.intersect();
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('intersect throws without right box', function() {
         expect(function() {
             ObjectOrientedBoundingBox.intersect(new ObjectOrientedBoundingBox());
-        }).toThrow();
+        }).toThrowDeveloperError();
     });
 
     it('does not intersect (1)', function() {
@@ -213,7 +209,7 @@ defineSuite([
     it('does not intersect (4)', function() {
         var box1 = ObjectOrientedBoundingBox.fromPoints(positions);
         var points = rotatePositions(positions, Cartesian3.UNIT_Z, CesiumMath.PI_OVER_FOUR).points;
-        var translation = Cartesian3.multiplyByScalar(new Cartesian3(2.0, 3.0, 0.0), 2.1);
+        var translation = Cartesian3.multiplyByScalar(new Cartesian3(2.0, 3.0, 0.0), 2.1, new Cartesian3());
         points = translatePositions(points, translation);
         var box2 = ObjectOrientedBoundingBox.fromPoints(points);
         expect(ObjectOrientedBoundingBox.intersect(box1, box2)).toEqual(false);
@@ -222,7 +218,7 @@ defineSuite([
     it('does not intersect (5)', function() {
         var box1 = ObjectOrientedBoundingBox.fromPoints(positions);
         var points = rotatePositions(positions, Cartesian3.UNIT_X, CesiumMath.PI_OVER_FOUR).points;
-        var translation = Cartesian3.multiplyByScalar(new Cartesian3(0.0, 3.0, 4.0), 2.1);
+        var translation = Cartesian3.multiplyByScalar(new Cartesian3(0.0, 3.0, 4.0), 2.1, new Cartesian3());
         points = translatePositions(points, translation);
         var box2 = ObjectOrientedBoundingBox.fromPoints(points);
         expect(ObjectOrientedBoundingBox.intersect(box1, box2)).toEqual(false);

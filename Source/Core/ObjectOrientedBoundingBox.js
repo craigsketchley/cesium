@@ -1,20 +1,16 @@
 /*global define*/
 define([
+        './Cartesian3',
         './defaultValue',
         './defined',
         './DeveloperError',
-        './Cartesian3',
-        './Intersect',
-        './Matrix3',
-        './BoundingRectangle'
+        './Matrix3'
     ], function(
+        Cartesian3,
         defaultValue,
         defined,
         DeveloperError,
-        Cartesian3,
-        Intersect,
-        Matrix3,
-        BoundingRectangle) {
+        Matrix3) {
     "use strict";
 
     /**
@@ -28,17 +24,18 @@ define([
      * @param {Cartesian3} [translation=Cartesian3.ZERO] The position of the box.
      * @param {Cartesian3} [scale=Cartesian3.ZERO] The scale of the box.
      *
-     * @example
-     * // Create an ObjectOrientedBoundingBox using a transformation matrix, a position where the box will be translated, and a scale.
-     * var rotation = Matrix3.clone(Matrix3.IDENTITY);
-     * var translation = new Cartesian3(1,0,0);
-     * var scale = new Cartesian3(0,5,0);
-     *
-     * var oobb = new ObjectOrientedBoundingBox(rotation, translation, scale);
-     *
      * @see ObjectOrientedBoundingBox.fromPoints
      * @see ObjectOrientedBoundingBox.fromBoundingRectangle
      * @see BoundingSphere
+     * @see BoundingRectangle
+     *
+     * @example
+     * // Create an ObjectOrientedBoundingBox using a transformation matrix, a position where the box will be translated, and a scale.
+     * var rotation = Cesium.Matrix3.clone(Cesium.Matrix3.IDENTITY);
+     * var translation = new Cesium.Cartesian3(1,0,0);
+     * var scale = new Cesium.Cartesian3(0,5,0);
+     *
+     * var oobb = new Cesium.ObjectOrientedBoundingBox(rotation, translation, scale);
      */
     var ObjectOrientedBoundingBox = function(rotation, translation, scale) {
         /**
@@ -66,7 +63,6 @@ define([
     var scratchCartesian3 = new Cartesian3();
     var scratchCartesian4 = new Cartesian3();
     var scratchCartesian5 = new Cartesian3();
-    var scratchCartesian6 = new Cartesian3();
     var scratchCovarianceResult = new Matrix3();
     var scratchEigenResult = {
         unitary : new Matrix3(),
@@ -77,15 +73,14 @@ define([
      * Computes an instance of an ObjectOrientedBoundingBox of the given positions.
      * This is an implementation of Stefan Gottschalk's Collision Queries using Oriented Bounding Boxes solution (PHD thesis).
      * Reference: http://gamma.cs.unc.edu/users/gottschalk/main.pdf
-     * @memberof ObjectOrientedBoundingBox
      *
-     * @param {Array} positions List of {@link Cartesian3} points that the bounding box will enclose.
+     * @param {Cartesian3[]} positions List of {@link Cartesian3} points that the bounding box will enclose.
      * @param {ObjectOrientedBoundingBox} [result] The object onto which to store the result.
-     * @return {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if one was not provided.
+     * @returns {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if one was not provided.
      *
      * @example
      * // Compute an object oriented bounding box enclosing two points.
-     * var box = ObjectOrientedBoundingBox.fromPoints([new Cartesian3(2, 0, 0), new Cartesian3(-2, 0, 0)]);
+     * var box = Cesium.ObjectOrientedBoundingBox.fromPoints([new Cesium.Cartesian3(2, 0, 0), new Cesium.Cartesian3(-2, 0, 0)]);
      */
     ObjectOrientedBoundingBox.fromPoints = function(positions, result) {
         if (!defined(result)) {
@@ -145,7 +140,7 @@ define([
         covarianceMatrix[7] = eyz;
         covarianceMatrix[8] = ezz;
 
-        var eigenDecomposition = Matrix3.getEigenDecomposition(covarianceMatrix, scratchEigenResult);
+        var eigenDecomposition = Matrix3.computeEigenDecomposition(covarianceMatrix, scratchEigenResult);
         var rotation = Matrix3.transpose(eigenDecomposition.unitary, result.rotation);
 
         p = Cartesian3.subtract(positions[0], meanPoint, scratchCartesian2);
@@ -156,8 +151,8 @@ define([
         for (i = 1; i < length; i++) {
             p = Cartesian3.subtract(positions[i], meanPoint, p);
             Matrix3.multiplyByVector(rotation, p, tempPoint);
-            Cartesian3.getMinimumByComponent(minPoint, tempPoint, minPoint);
-            Cartesian3.getMaximumByComponent(maxPoint, tempPoint, maxPoint);
+            Cartesian3.minimumByComponent(minPoint, tempPoint, minPoint);
+            Cartesian3.maximumByComponent(maxPoint, tempPoint, maxPoint);
         }
 
         var center = Cartesian3.add(minPoint, maxPoint, scratchCartesian3);
@@ -174,22 +169,21 @@ define([
     /**
      * Computes an ObjectOrientedBoundingBox from a BoundingRectangle.
      * The BoundingRectangle is placed on the XY plane.
-     * @memberof ObjectOrientedBoundingBox
      *
      * @param {BoundingRectangle} boundingRectangle A bounding rectangle.
      * @param {Number} [rotation=0.0] The rotation of the bounding box in radians.
-     * @return {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if one was not provided.
-     *
-     * @exception {DeveloperError} boundingRectangle is required.
+     * @returns {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if one was not provided.
      *
      * @example
      * // Compute an object oriented bounding box enclosing two points.
-     * var box = ObjectOrientedBoundingBox.fromBoundingRectangle(boundingRectangle, 0.0);
+     * var box = Cesium.ObjectOrientedBoundingBox.fromBoundingRectangle(boundingRectangle, 0.0);
      */
     ObjectOrientedBoundingBox.fromBoundingRectangle = function(boundingRectangle, rotation, result) {
+        //>>includeStart('debug', pragmas.debug);
         if (!defined(boundingRectangle)) {
             throw new DeveloperError('boundingRectangle is required');
         }
+        //>>includeEnd('debug');
 
         if (!defined(result)) {
             result = new ObjectOrientedBoundingBox();
@@ -215,11 +209,10 @@ define([
 
     /**
      * Duplicates a ObjectOrientedBoundingBox instance.
-     * @memberof ObjectOrientedBoundingBox
      *
      * @param {ObjectOrientedBoundingBox} box The bounding box to duplicate.
      * @param {ObjectOrientedBoundingBox} [result] The object onto which to store the result.
-     * @return {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if none was provided. (Returns undefined if box is undefined)
+     * @returns {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if none was provided. (Returns undefined if box is undefined)
      */
     ObjectOrientedBoundingBox.clone = function(box, result) {
         if (!defined(box)) {
@@ -277,22 +270,20 @@ define([
     /**
      * Checks if two ObjectOrientedBoundingBoxes intersect.
      * This is an implementation of Stefan Gottschalk's Collision Queries using Oriented Bounding Boxes solution (PHD thesis).
-     * @memberof ObjectOrientedBoundingBox
      *
      * @param {ObjectOrientedBoundingBox} left The first ObjectOrientedBoundingBox.
      * @param {ObjectOrientedBoundingBox} right The second ObjectOrientedBoundingBox.
-     * @return {Boolean} <code>true</code> if they intersects each other <code>false</code> otherwise.
-     *
-     * @exception {DeveloperError} left is required.
-     * @exception {DeveloperError} right is required.
+     * @returns {Boolean} <code>true</code> if they intersects each other <code>false</code> otherwise.
      */
     ObjectOrientedBoundingBox.intersect = function(left, right) {
+        //>>includeStart('debug', pragmas.debug);
         if (!defined(left)) {
             throw new DeveloperError('left is required');
         }
         if (!defined(right)) {
             throw new DeveloperError('right is required');
         }
+        //>>includeEnd('debug');
 
         var leftTransformTransposed = Matrix3.transpose(left.rotation, scratchIntersectMatrix1);
         var B = Matrix3.multiply(leftTransformTransposed, right.rotation, scratchIntersectMatrix2);
@@ -362,11 +353,10 @@ define([
     /**
      * Compares the provided ObjectOrientedBoundingBox componentwise and returns
      * <code>true</code> if they are equal, <code>false</code> otherwise.
-     * @memberof ObjectOrientedBoundingBox
      *
      * @param {ObjectOrientedBoundingBox} left The first ObjectOrientedBoundingBox.
      * @param {ObjectOrientedBoundingBox} right The second ObjectOrientedBoundingBox.
-     * @return {Boolean} <code>true</code> if left and right are equal, <code>false</code> otherwise.
+     * @returns {Boolean} <code>true</code> if left and right are equal, <code>false</code> otherwise.
      */
     ObjectOrientedBoundingBox.equals = function(left, right) {
         return (left === right) ||
@@ -374,15 +364,14 @@ define([
                  (defined(right)) &&
                  Cartesian3.equals(left.transformedPosition, right.transformedPosition) &&
                  Matrix3.equals(left.transformMatrix, right.transformMatrix) &&
-                 Cartesian3.equals(left.extent, right.extent));
+                 Cartesian3.equals(left.rectangle, right.rectangle));
     };
 
     /**
      * Duplicates this ObjectOrientedBoundingBox instance.
-     * @memberof ObjectOrientedBoundingBox
      *
      * @param {ObjectOrientedBoundingBox} [result] The object onto which to store the result.
-     * @return {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if one was not provided.
+     * @returns {ObjectOrientedBoundingBox} The modified result parameter or a new ObjectOrientedBoundingBox instance if one was not provided.
      */
     ObjectOrientedBoundingBox.prototype.clone = function(result) {
         return ObjectOrientedBoundingBox.clone(this, result);
@@ -391,10 +380,9 @@ define([
     /**
      * Compares this ObjectOrientedBoundingBox against the provided ObjectOrientedBoundingBox componentwise and returns
      * <code>true</code> if they are equal, <code>false</code> otherwise.
-     * @memberof ObjectOrientedBoundingBox
      *
      * @param {ObjectOrientedBoundingBox} [right] The right hand side ObjectOrientedBoundingBox.
-     * @return {Boolean} <code>true</code> if they are equal, <code>false</code> otherwise.
+     * @returns {Boolean} <code>true</code> if they are equal, <code>false</code> otherwise.
      */
     ObjectOrientedBoundingBox.prototype.equals = function(right) {
         return ObjectOrientedBoundingBox.equals(this, right);
